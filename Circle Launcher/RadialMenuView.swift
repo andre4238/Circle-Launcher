@@ -19,17 +19,31 @@ struct RadialMenuView: View {
     @State private var hoveredIndex: Int? = nil
     @State private var mouseLocation: CGPoint = .zero
     @State private var trackingMouseLocation = false
+    @AppStorage("circleRadius") private var circleRadius: Double = 80.0  // UserDefaults Einstellung
     
-    private let radius: CGFloat = 80  // Reduziert von 120 → Apps näher am Zentrum
-    private let centerCircleRadius: CGFloat = 30  // Reduziert von 40 → Kleinerer Mittelkreis
-    private let itemSize: CGFloat = 50  // Reduziert von 60 → Kleinere App-Icons
+    // Abgeleitete Werte basierend auf circleRadius
+    private var centerCircleRadius: CGFloat {
+        circleRadius * 0.375  // 30/80 = 0.375 (proportional)
+    }
+    
+    private var itemSize: CGFloat {
+        circleRadius * 0.625  // 50/80 = 0.625 (proportional)
+    }
+    
+    private var frameSize: CGFloat {
+        circleRadius * 3.75  // 300/80 = 3.75 (proportional)
+    }
+    
+    private var backgroundSize: CGFloat {
+        circleRadius * 2 + 80  // Blur-Ring-Größe
+    }
     
     var body: some View {
         GeometryReader { geometry in
             ZStack {
                 // Background with blur effect - mit Loch in der Mitte (Donut-Form)
                 VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                    .frame(width: radius * 2 + 80, height: radius * 2 + 80)
+                    .frame(width: backgroundSize, height: backgroundSize)
                     .mask(
                         // Donut-Maske: Großer Kreis minus kleiner Kreis in der Mitte
                         ZStack {
@@ -79,7 +93,7 @@ struct RadialMenuView: View {
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .frame(width: 300, height: 300)  // Reduziert von 400x400 → kompakteres Menü
+        .frame(width: frameSize, height: frameSize)  // Dynamische Größe basierend auf Einstellung
     }
     
     private func handleMouseMove(at location: CGPoint, in size: CGSize) {
@@ -124,8 +138,8 @@ struct RadialMenuView: View {
     private func positionForAngle(_ angle: Double, center: CGPoint) -> CGPoint {
         let radians = angle * .pi / 180
         return CGPoint(
-            x: center.x + radius * cos(radians),
-            y: center.y + radius * sin(radians)
+            x: center.x + circleRadius * cos(radians),
+            y: center.y + circleRadius * sin(radians)
         )
     }
 }
@@ -251,5 +265,5 @@ class MouseTrackingNSView: NSView {
         }
     )
     .modelContainer(for: AppItem.self, inMemory: true)
-    .frame(width: 300, height: 300)  // Angepasst an neue Größe
+    .frame(width: 300, height: 300)  // Standard-Größe für Preview
 }

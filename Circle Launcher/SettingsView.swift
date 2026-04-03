@@ -16,8 +16,35 @@ struct SettingsView: View {
     
     @State private var selectedApp: AppItem?
     @State private var showingAddSheet = false
+    @AppStorage("circleRadius") private var circleRadius: Double = 80.0  // Standard: 80
     
     var body: some View {
+        VStack(spacing: 0) {
+            // Header with Tabs
+            TabView {
+                // Tab 1: Apps
+                appsTab
+                    .tabItem {
+                        Label("Apps", systemImage: "app.badge")
+                    }
+                
+                // Tab 2: Appearance
+                appearanceTab
+                    .tabItem {
+                        Label("Appearance", systemImage: "slider.horizontal.3")
+                    }
+            }
+        }
+        .sheet(isPresented: $showingAddSheet) {
+            AddAppSheet(onAdd: { name, bundleID in
+                addApp(name: name, bundleID: bundleID)
+            })
+        }
+    }
+    
+    // MARK: - Apps Tab
+    
+    private var appsTab: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
@@ -106,12 +133,143 @@ struct SettingsView: View {
             }
             .padding()
         }
-        .sheet(isPresented: $showingAddSheet) {
-            AddAppSheet(onAdd: { name, bundleID in
-                addApp(name: name, bundleID: bundleID)
-            })
+    }
+    
+    // MARK: - Appearance Tab
+    
+    private var appearanceTab: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Appearance Settings")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                
+                Text("Customize the look and size of your radial launcher")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            
+            Divider()
+            
+            // Settings Content
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Circle Size")
+                                .font(.headline)
+                            
+                            Spacer()
+                            
+                            Text("\(Int(circleRadius)) px")
+                                .font(.system(.body, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        Slider(value: $circleRadius, in: 60...150, step: 5) {
+                            Text("Circle Radius")
+                        }
+                        
+                        HStack(spacing: 8) {
+                            Button("Small") {
+                                circleRadius = 60
+                            }
+                            .buttonStyle(.bordered)
+                            
+                            Button("Medium") {
+                                circleRadius = 80
+                            }
+                            .buttonStyle(.bordered)
+                            
+                            Button("Large") {
+                                circleRadius = 120
+                            }
+                            .buttonStyle(.bordered)
+                            
+                            Button("Extra Large") {
+                                circleRadius = 150
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .font(.caption)
+                        
+                        Text("Adjust the radius of the circle where app icons are positioned")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 8)
+                } header: {
+                    Text("Circle Radius")
+                } footer: {
+                    Text("Changes will take effect the next time you open the launcher (⌥⌘)")
+                }
+                
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "circle")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.secondary)
+                            
+                            Text("Current size: \(sizeDescription)")
+                                .font(.subheadline)
+                        }
+                        
+                        HStack(spacing: 4) {
+                            Text("Total diameter:")
+                            Text("\(Int(circleRadius * 2 + 80)) px")
+                                .font(.system(.body, design: .monospaced))
+                                .foregroundStyle(.blue)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Preview Info")
+                }
+            }
+            .formStyle(.grouped)
+            
+            Spacer()
+            
+            Divider()
+            
+            // Footer
+            HStack {
+                Text("💡 Tip: Larger circles work better with more apps")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                
+                Spacer()
+                
+                Button("Reset to Default") {
+                    circleRadius = 80
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding()
         }
     }
+    
+    private var sizeDescription: String {
+        switch circleRadius {
+        case ..<70:
+            return "Extra Small"
+        case 70..<90:
+            return "Small"
+        case 90..<110:
+            return "Medium"
+        case 110..<130:
+            return "Large"
+        default:
+            return "Extra Large"
+        }
+    }
+    
+    // MARK: - Helper Methods
     
     private func addApp(name: String, bundleID: String) {
         let newPosition = apps.map { $0.position }.max() ?? -1

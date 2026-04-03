@@ -116,8 +116,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func setupRadialMenuPanel() {
+        // Panel-Größe aus UserDefaults laden
+        let circleRadius = UserDefaults.standard.double(forKey: "circleRadius")
+        let radius = circleRadius > 0 ? circleRadius : 80.0  // Fallback auf 80
+        let panelSize = radius * 3.75  // Gleiche Berechnung wie in RadialMenuView
+        
         let panel = RadialMenuPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 300),  // Reduziert von 400x400
+            contentRect: NSRect(x: 0, y: 0, width: panelSize, height: panelSize),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
