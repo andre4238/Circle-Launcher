@@ -1,21 +1,25 @@
 {
   "images" : [
     {
+      "filename" : "circle16.jpg",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "16x16"
     },
     {
+      "filename" : "circle32.jpg",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "16x16"
     },
     {
+      "filename" : "circle32 1.jpg",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "32x32"
     },
     {
+      "filename" : "circle64.jpg",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "32x32"
@@ -46,6 +50,7 @@
       "size" : "512x512"
     },
     {
+      "filename" : "Hintergrund 3.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "512x512"
