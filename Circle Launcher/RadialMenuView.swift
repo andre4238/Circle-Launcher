@@ -135,31 +135,23 @@ struct AppItemView: View {
     let isHovered: Bool
     
     var body: some View {
-        VStack(spacing: 3) {  // Reduziert von 4 → kompakter
-            ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        Circle()
-                            .stroke(isHovered ? Color.accentColor : Color.white.opacity(0.3), lineWidth: isHovered ? 3 : 2)
-                    )
-                
-                Image(nsImage: app.icon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 28, height: 28)  // Reduziert von 32 → kleinere Icons
-            }
-            .frame(width: 42, height: 42)  // Reduziert von 50 → kompaktere Circles
-            .scaleEffect(isHovered ? 1.15 : 1.0)  // Etwas mehr Scale für bessere Sichtbarkeit
-            .shadow(color: isHovered ? .accentColor.opacity(0.5) : .clear, radius: 10)
+        VStack(spacing: 3) {
+            // Nur das Icon, KEIN Circle drumherum mehr
+            Image(nsImage: app.icon)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 32, height: 32)  // Etwas größer da kein Circle mehr
+                .scaleEffect(isHovered ? 1.2 : 1.0)  // Mehr Scale-Effekt beim Hover
+                .shadow(color: isHovered ? .accentColor.opacity(0.6) : .black.opacity(0.3), radius: isHovered ? 12 : 4)
+                .shadow(color: .black.opacity(0.5), radius: 2)  // Zweiter Shadow für Tiefe
             
             Text(app.name)
-                .font(.caption2)  // Kleinere Schrift
-                .fontWeight(isHovered ? .semibold : .regular)
+                .font(.caption2)
+                .fontWeight(isHovered ? .bold : .semibold)  // Bold beim Hover
                 .foregroundColor(.white)
-                .shadow(color: .black.opacity(0.5), radius: 2)
+                .shadow(color: .black.opacity(0.7), radius: 2)
                 .lineLimit(1)
-                .frame(maxWidth: 70)  // Reduziert von 80 → weniger Platz
+                .frame(maxWidth: 70)
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
     }
