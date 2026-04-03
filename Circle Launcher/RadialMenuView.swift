@@ -20,9 +20,9 @@ struct RadialMenuView: View {
     @State private var mouseLocation: CGPoint = .zero
     @State private var trackingMouseLocation = false
     
-    private let radius: CGFloat = 120
-    private let centerCircleRadius: CGFloat = 40
-    private let itemSize: CGFloat = 60
+    private let radius: CGFloat = 80  // Reduziert von 120 → Apps näher am Zentrum
+    private let centerCircleRadius: CGFloat = 30  // Reduziert von 40 → Kleinerer Mittelkreis
+    private let itemSize: CGFloat = 50  // Reduziert von 60 → Kleinere App-Icons
     
     var body: some View {
         GeometryReader { geometry in
@@ -30,7 +30,7 @@ struct RadialMenuView: View {
                 // Background with blur effect
                 VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
                     .clipShape(Circle())
-                    .frame(width: radius * 2 + 100, height: radius * 2 + 100)
+                    .frame(width: radius * 2 + 80, height: radius * 2 + 80)  // Reduziert von +100 → kompakter
                 
                 // LINIEN ENTFERNT - Kein Canvas mehr
                 
@@ -44,7 +44,7 @@ struct RadialMenuView: View {
                         )
                     
                     Image(systemName: "app.dashed")
-                        .font(.system(size: 24))
+                        .font(.system(size: 18))  // Reduziert von 24 → kleineres Icon
                         .foregroundStyle(.secondary)
                 }
                 .frame(width: centerCircleRadius * 2, height: centerCircleRadius * 2)
@@ -82,7 +82,7 @@ struct RadialMenuView: View {
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .frame(width: 400, height: 400)
+        .frame(width: 300, height: 300)  // Reduziert von 400x400 → kompakteres Menü
     }
     
     private func handleMouseMove(at location: CGPoint, in size: CGSize) {
@@ -138,7 +138,7 @@ struct AppItemView: View {
     let isHovered: Bool
     
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {  // Reduziert von 4 → kompakter
             ZStack {
                 Circle()
                     .fill(.ultraThinMaterial)
@@ -150,19 +150,19 @@ struct AppItemView: View {
                 Image(nsImage: app.icon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 28, height: 28)  // Reduziert von 32 → kleinere Icons
             }
-            .frame(width: 50, height: 50)
-            .scaleEffect(isHovered ? 1.1 : 1.0)
+            .frame(width: 42, height: 42)  // Reduziert von 50 → kompaktere Circles
+            .scaleEffect(isHovered ? 1.15 : 1.0)  // Etwas mehr Scale für bessere Sichtbarkeit
             .shadow(color: isHovered ? .accentColor.opacity(0.5) : .clear, radius: 10)
             
             Text(app.name)
-                .font(.caption)
+                .font(.caption2)  // Kleinere Schrift
                 .fontWeight(isHovered ? .semibold : .regular)
                 .foregroundColor(.white)
                 .shadow(color: .black.opacity(0.5), radius: 2)
                 .lineLimit(1)
-                .frame(maxWidth: 80)
+                .frame(maxWidth: 70)  // Reduziert von 80 → weniger Platz
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
     }
@@ -262,5 +262,5 @@ class MouseTrackingNSView: NSView {
         }
     )
     .modelContainer(for: AppItem.self, inMemory: true)
-    .frame(width: 400, height: 400)
+    .frame(width: 300, height: 300)  // Angepasst an neue Größe
 }

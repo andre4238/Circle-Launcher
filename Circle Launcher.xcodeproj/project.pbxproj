@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A42995592F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md in Resources */ = {isa = PBXBuildFile; fileRef = A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */; };
 		A429955B2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md in Resources */ = {isa = PBXBuildFile; fileRef = A429955A2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md */; };
+		A429955D2F80583E00126F05 /* KLEINERER_CIRCLE.md in Resources */ = {isa = PBXBuildFile; fileRef = A429955C2F80583E00126F05 /* KLEINERER_CIRCLE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +35,7 @@
 		A42994EF2F80469B00126F05 /* Circle LauncherUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Circle LauncherUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AENDERUNGEN_HOVER_LAUNCH.md; sourceTree = "<group>"; };
 		A429955A2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FIX_HOVER_ALLE_APPS.md; sourceTree = "<group>"; };
+		A429955C2F80583E00126F05 /* KLEINERER_CIRCLE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = KLEINERER_CIRCLE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -88,6 +90,7 @@
 				A42994D72F80469900126F05 /* Products */,
 				A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */,
 				A429955A2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md */,
+				A429955C2F80583E00126F05 /* KLEINERER_CIRCLE.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -222,6 +225,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A42995592F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md in Resources */,
+				A429955D2F80583E00126F05 /* KLEINERER_CIRCLE.md in Resources */,
 				A429955B2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

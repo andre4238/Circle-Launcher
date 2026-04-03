@@ -117,7 +117,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func setupRadialMenuPanel() {
         let panel = RadialMenuPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 400),
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 300),  // Reduziert von 400x400
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
