@@ -1,56 +1,61 @@
 {
   "images" : [
     {
-      "filename" : "circle16.jpg",
+      "filename" : "radial16.jpg",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "16x16"
     },
     {
-      "filename" : "circle32.jpg",
+      "filename" : "radial32 1.jpg",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "16x16"
     },
     {
-      "filename" : "circle32 1.jpg",
+      "filename" : "radial32.jpg",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "32x32"
     },
     {
-      "filename" : "circle64.jpg",
+      "filename" : "radial64.jpg",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "32x32"
     },
     {
+      "filename" : "radial128.jpg",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "128x128"
     },
     {
+      "filename" : "radial256 1.jpg",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "128x128"
     },
     {
+      "filename" : "radial256.jpg",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "256x256"
     },
     {
+      "filename" : "radial512 1.jpg",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "256x256"
     },
     {
+      "filename" : "radial512.jpg",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "512x512"
     },
     {
-      "filename" : "Hintergrund 3.png",
+      "filename" : "radial1024.jpg",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "512x512"

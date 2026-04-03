@@ -4,4 +4,10 @@
    <FileRef
       location = "self:">
    </FileRef>
+   <FileRef
+      location = "group:BUNDLE_IDENTIFIER_FIX.md">
+   </FileRef>
+   <FileRef
+      location = "group:KRITISCHER_FIX_BUNDLE.md">
+   </FileRef>
 </Workspace>
