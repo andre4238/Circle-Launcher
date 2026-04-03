@@ -125,6 +125,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         panel.modelContainer = modelContainer
         panel.delegate = self
+        panel.onEscapeClose = { [weak self] in
+            self?.forceCloseRadialMenu()
+        }
         
         radialMenuPanel = panel
     }
@@ -181,9 +184,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func closeRadialMenu() {
         guard let panel = radialMenuPanel else { return }
         if panel.isVisible {
+            // Wenn eine App gehovert ist, starte sie
+            if let app = hoveredApp {
+                app.launch()
+                print("🚀 App gestartet: \(app.name)")
+            }
+            
             panel.close()
             isLauncherOpen = false
             launcherOpenPosition = nil
+            hoveredApp = nil // Reset nach dem Schließen
+        }
+    }
+    
+    private func forceCloseRadialMenu() {
+        // Schließt das Menü OHNE App zu starten (z.B. bei Escape)
+        guard let panel = radialMenuPanel else { return }
+        if panel.isVisible {
+            print("❌ Menü abgebrochen ohne App zu starten")
+            panel.close()
+            isLauncherOpen = false
+            launcherOpenPosition = nil
+            hoveredApp = nil // Reset ohne App zu starten
         }
     }
     
@@ -216,8 +238,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             onHoverChange: { [weak self] app in
                 self?.hoveredApp = app
                 if let app = app {
-                    // Optionally: launch app when hovered
-                    NSWorkspace.shared.launchApplication(withBundleIdentifier: app.bundleIdentifier, options: [], additionalEventParamDescriptor: nil, launchIdentifier: nil)
+                    print("🎯 Hovering: \(app.name)")
+                } else {
+                    print("❌ Kein Hover")
                 }
             },
             onClose: { [weak self] in

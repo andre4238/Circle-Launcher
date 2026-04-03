@@ -3,124 +3,180 @@
 ## ✨ Aktualisiertes Verhalten
 
 ### 🎯 Öffnen des Launchers
-- **Drücken Sie**: ⌥Space (Option + Leertaste)
+- **Drücken und halten Sie**: ⌥⌘ (Option + Command)
 - Der Launcher erscheint **sofort am Cursor**
 - Er bleibt offen, solange Sie die Tasten gedrückt halten
 
-### 🎯 Schließen des Launchers
+### 🎯 App auswählen und starten
 
-Der Launcher schließt sich in folgenden Fällen:
+Es gibt **zwei Möglichkeiten**, eine App zu starten:
 
-1. **Beim Loslassen der Tastenkombination**
-   - Lassen Sie entweder **Option** oder **Space** los
-   - Der Launcher schließt sich sofort
+#### Methode 1: Hover + Loslassen (empfohlen)
+1. Halten Sie ⌥⌘ gedrückt
+2. Bewegen Sie die Maus über eine App (sie wird hervorgehoben)
+3. Lassen Sie die Tasten los
+4. ✅ Die gehöverte App wird gestartet
 
-2. **Beim Klicken auf eine App**
-   - Klicken Sie auf ein App-Icon
-   - Die App wird gestartet
-   - Der Launcher schließt sich automatisch
+#### Methode 2: Klicken
+1. Halten Sie ⌥⌘ gedrückt
+2. Klicken Sie auf eine App
+3. ✅ Die App wird sofort gestartet (ohne Tasten loszulassen)
 
-3. **Escape-Taste**
+### 🎯 Schließen ohne App zu starten
+
+Der Launcher schließt sich **ohne App zu starten** in folgenden Fällen:
+
+1. **Tasten loslassen ohne Hover**
+   - Wenn Sie ⌥⌘ loslassen und keine App gehovert ist
+   - Der Launcher schließt sich einfach
+
+2. **Escape-Taste**
    - Drücken Sie **Escape** (Esc)
-   - Der Launcher schließt sich sofort
+   - Der Launcher schließt sich sofort ohne App zu starten
 
 ## 🔄 Unterschied zum vorherigen Verhalten
 
 ### ❌ Alt (deaktiviert):
 - Auto-Schließen beim Wegbewegen der Maus
 - Toggle-Verhalten (Drücken = öffnen/schließen)
+- Apps starten sofort beim Hovern
 
 ### ✅ Neu (aktiv):
 - Öffnen beim Drücken der Tasten
-- Schließen beim Loslassen der Tasten
+- Apps starten beim Loslassen (Hover) oder Klicken
 - Kein Auto-Schließen beim Wegbewegen der Maus
 - Sie können die Maus frei bewegen, während Sie die Tasten halten
 
 ## 🎮 Nutzungsfluss
 
 ```
-1. Halten Sie ⌥Space gedrückt
+Variante A: Hover + Loslassen (schnell!)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Halten Sie ⌥⌘ gedrückt
    └─→ Launcher erscheint am Cursor
 
 2. Bewegen Sie die Maus über eine App
    └─→ App wird hervorgehoben
 
-3. Zwei Optionen:
-   
-   A) Klicken Sie auf die App
-      └─→ App startet + Launcher schließt
-   
-   B) Lassen Sie ⌥ oder Space los
-      └─→ Launcher schließt (ohne App zu starten)
+3. Lassen Sie ⌥⌘ los
+   └─→ App startet + Launcher schließt
+
+
+Variante B: Klicken (präzise)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Halten Sie ⌥⌘ gedrückt
+   └─→ Launcher erscheint am Cursor
+
+2. Klicken Sie auf eine App
+   └─→ App startet + Launcher schließt
+
+
+Variante C: Abbrechen
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Halten Sie ⌥⌘ gedrückt
+   └─→ Launcher erscheint am Cursor
+
+2. Keine App gewünscht?
+   └─→ Lassen Sie ⌥⌘ los (ohne Hover)
+   └─→ Launcher schließt ohne App zu starten
+
+   ODER
+
+   └─→ Drücken Sie Escape
+   └─→ Launcher schließt ohne App zu starten
 ```
 
 ## 🚀 Vorteile
 
-✅ **Schneller Zugriff**: Tasten halten → App auswählen → Tasten loslassen  
+✅ **Schneller Zugriff**: Tasten halten → Hover → Loslassen  
+✅ **Präzise Auswahl**: Alternativ mit Klick für mehr Kontrolle  
 ✅ **Intuitive Bedienung**: Wie ein Kontext-Menü  
 ✅ **Präzise Kontrolle**: Launcher bleibt solange offen wie gewünscht  
 ✅ **Kein Versehen**: Launcher schließt nicht aus Versehen  
+✅ **Flexibel**: Zwei Methoden zur Auswahl (Hover oder Klick)
 
 ## 🛠️ Technische Details
 
 ### Event-Monitoring
 
-Die App überwacht jetzt drei Event-Typen:
+Die App überwacht jetzt mehrere Event-Typen:
 
-1. **`.keyDown`** - Öffnet den Launcher bei ⌥Space
-2. **`.keyUp`** - Schließt bei Loslassen der Space-Taste
-3. **`.flagsChanged`** - Schließt bei Loslassen der Option-Taste
+1. **`.flagsChanged`** - Öffnet/schließt bei ⌥⌘
+2. **`.onHover`** - Speichert gehöverte App
+3. **`.onTapGesture`** - Startet App direkt beim Klick
 
 ### Code-Änderungen
 
 - `AppDelegate.swift` → `registerGlobalHotkey()`
-  - Neue Event-Monitore für `keyUp` und `flagsChanged`
-  - Neue Methode `closeRadialMenu()`
+  - Event-Monitore für `flagsChanged`
+  - `closeRadialMenu()` prüft gehöverte App und startet sie
 
-- `RadialMenuPanel.swift` → `makeKeyAndOrderFront()`
-  - Mouse-Tracking deaktiviert
-  - Nur noch manuelle Schließung via Tasten
+- `RadialMenuView.swift` → App items
+  - `.onHover` speichert App in `hoveredApp`
+  - `.onTapGesture` startet App sofort und schließt Menü
+
+- `AppDelegate.swift` → `hoveredApp`
+  - Neue Variable speichert aktuell gehöverte App
+  - Wird beim Schließen gestartet (falls vorhanden)
 
 ## 💡 Tipps
 
-### Tipp 1: Schneller Workflow
+### Tipp 1: Schnellster Workflow (Hover)
 ```
-⌥Space halten → Mit Maus über App fahren → Klick → Fertig!
-```
-
-### Tipp 2: Abbrechen
-```
-⌥Space halten → Keine App gewünscht → Tasten loslassen
+⌥⌘ halten → Mit Maus über App fahren → Tasten loslassen → Fertig!
+⏱️ Dauer: ~1 Sekunde
 ```
 
-### Tipp 3: Zweite Meinung
+### Tipp 2: Präziser Workflow (Klick)
 ```
-⌥Space halten → Über Apps schauen → Escape drücken
+⌥⌘ halten → Auf App klicken → Fertig!
+⏱️ Dauer: ~1 Sekunde
+```
+
+### Tipp 3: Abbrechen ohne App
+```
+⌥⌘ halten → Keine App gewünscht → Tasten loslassen (ohne Hover)
+ODER
+⌥⌘ halten → Keine App gewünscht → Escape drücken
+```
+
+### Tipp 4: Apps durchstöbern
+```
+⌥⌘ halten → Über verschiedene Apps hovern → Richtige gefunden → Tasten loslassen
 ```
 
 ## 🧪 Testen
 
 Nach dem Build:
 
-1. **Test 1: Öffnen und Loslassen**
+1. **Test 1: Hover + Loslassen**
    ```
-   ⌥Space drücken → Launcher erscheint
-   Tasten loslassen → Launcher verschwindet
+   ⌥⌘ drücken → Launcher erscheint
+   Über Safari hovern → Safari ist hervorgehoben
+   Tasten loslassen → Safari startet + Launcher verschwindet
    ✅ Erfolgreich
    ```
 
-2. **Test 2: App starten**
+2. **Test 2: Klicken**
    ```
-   ⌥Space drücken → Launcher erscheint
-   Auf Safari klicken → Safari startet + Launcher verschwindet
+   ⌥⌘ drücken → Launcher erscheint
+   Auf Mail klicken → Mail startet + Launcher verschwindet
    ✅ Erfolgreich
    ```
 
-3. **Test 3: Escape**
+3. **Test 3: Abbrechen ohne Hover**
    ```
-   ⌥Space drücken → Launcher erscheint
+   ⌥⌘ drücken → Launcher erscheint
+   Tasten loslassen (ohne über App zu hovern) → Launcher verschwindet
+   ✅ Erfolgreich (keine App gestartet)
+   ```
+
+4. **Test 4: Escape**
+   ```
+   ⌥⌘ drücken → Launcher erscheint
+   Über App hovern → App hervorgehoben
    Escape drücken → Launcher verschwindet
-   ✅ Erfolgreich
+   ✅ Erfolgreich (keine App gestartet)
    ```
 
 ---

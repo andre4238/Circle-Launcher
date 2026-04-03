@@ -18,6 +18,7 @@ struct RadialMenuView: View {
     
     @State private var hoveredIndex: Int? = nil
     @State private var mouseLocation: CGPoint = .zero
+    @State private var trackingMouseLocation = false
     
     private let radius: CGFloat = 120
     private let centerCircleRadius: CGFloat = 40
@@ -60,16 +61,62 @@ struct RadialMenuView: View {
                     )
                     .frame(width: itemSize, height: itemSize)
                     .position(position)
+                    .contentShape(Circle()) // Wichtig: Definiert die Hover-Area als Kreis
                     .onHover { hovering in
                         hoveredIndex = hovering ? index : nil
                         onHoverChange(hovering ? app : nil)
+                        print("🎯 Hover-Status für \(app.name): \(hovering ? "EIN" : "AUS")")
                     }
-                    // KEIN onTapGesture mehr - nur Hover
+                    .onTapGesture {
+                        // Beim Klicken: App sofort starten und Menü schließen
+                        app.launch()
+                        print("🖱️ App per Klick gestartet: \(app.name)")
+                        onClose()
+                    }
+                }
+                
+                // Invisible overlay for mouse tracking
+                MouseTrackingView { location in
+                    handleMouseMove(at: location, in: geometry.size)
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .frame(width: 400, height: 400)
+    }
+    
+    private func handleMouseMove(at location: CGPoint, in size: CGSize) {
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        
+        // Check which app is being hovered
+        var newHoveredIndex: Int? = nil
+        var closestDistance: CGFloat = .infinity
+        
+        for (index, _) in apps.enumerated() {
+            let angle = angleForIndex(index, total: apps.count)
+            let position = positionForAngle(angle, center: center)
+            
+            // Calculate distance from mouse to app position
+            let distance = sqrt(pow(location.x - position.x, 2) + pow(location.y - position.y, 2))
+            
+            // If within itemSize radius (not /2, full size for easier hover)
+            if distance <= itemSize && distance < closestDistance {
+                newHoveredIndex = index
+                closestDistance = distance
+            }
+        }
+        
+        // Only update if changed
+        if newHoveredIndex != hoveredIndex {
+            hoveredIndex = newHoveredIndex
+            onHoverChange(newHoveredIndex != nil ? apps[newHoveredIndex!] : nil)
+            
+            if let index = newHoveredIndex {
+                print("🎯 Hovering über: \(apps[index].name) (Distanz: \(Int(closestDistance))px)")
+            } else {
+                print("❌ Kein Hover")
+            }
+        }
     }
     
     private func angleForIndex(_ index: Int, total: Int) -> Double {
@@ -137,6 +184,69 @@ struct VisualEffectView: NSViewRepresentable {
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
         nsView.blendingMode = blendingMode
+    }
+}
+
+// Mouse tracking view for accurate hover detection
+struct MouseTrackingView: NSViewRepresentable {
+    var onMouseMove: (CGPoint) -> Void
+    
+    func makeNSView(context: Context) -> MouseTrackingNSView {
+        let view = MouseTrackingNSView()
+        view.onMouseMove = onMouseMove
+        return view
+    }
+    
+    func updateNSView(_ nsView: MouseTrackingNSView, context: Context) {
+        nsView.onMouseMove = onMouseMove
+    }
+}
+
+class MouseTrackingNSView: NSView {
+    var onMouseMove: ((CGPoint) -> Void)?
+    private var trackingArea: NSTrackingArea?
+    
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        
+        if let trackingArea = trackingArea {
+            removeTrackingArea(trackingArea)
+        }
+        
+        let options: NSTrackingArea.Options = [
+            .activeAlways,
+            .mouseMoved,
+            .mouseEnteredAndExited,
+            .inVisibleRect
+        ]
+        
+        trackingArea = NSTrackingArea(
+            rect: bounds,
+            options: options,
+            owner: self,
+            userInfo: nil
+        )
+        
+        if let trackingArea = trackingArea {
+            addTrackingArea(trackingArea)
+        }
+    }
+    
+    override func mouseMoved(with event: NSEvent) {
+        let locationInView = convert(event.locationInWindow, from: nil)
+        // Flip Y coordinate because AppKit uses bottom-left origin, SwiftUI uses top-left
+        let flippedLocation = CGPoint(x: locationInView.x, y: bounds.height - locationInView.y)
+        onMouseMove?(flippedLocation)
+    }
+    
+    override func mouseEntered(with event: NSEvent) {
+        let locationInView = convert(event.locationInWindow, from: nil)
+        let flippedLocation = CGPoint(x: locationInView.x, y: bounds.height - locationInView.y)
+        onMouseMove?(flippedLocation)
+    }
+    
+    override func mouseExited(with event: NSEvent) {
+        onMouseMove?(CGPoint(x: -1000, y: -1000)) // Send far away point to clear hover
     }
 }
 

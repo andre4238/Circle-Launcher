@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A42995592F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md in Resources */ = {isa = PBXBuildFile; fileRef = A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */; };
+		A429955B2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md in Resources */ = {isa = PBXBuildFile; fileRef = A429955A2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		A42994E62F80469B00126F05 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +32,8 @@
 		A42994D62F80469900126F05 /* Circle Launcher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Circle Launcher.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A42994E52F80469B00126F05 /* Circle LauncherTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Circle LauncherTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A42994EF2F80469B00126F05 /* Circle LauncherUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Circle LauncherUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AENDERUNGEN_HOVER_LAUNCH.md; sourceTree = "<group>"; };
+		A429955A2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FIX_HOVER_ALLE_APPS.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -79,6 +86,8 @@
 				A42994E82F80469B00126F05 /* Circle LauncherTests */,
 				A42994F22F80469B00126F05 /* Circle LauncherUITests */,
 				A42994D72F80469900126F05 /* Products */,
+				A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */,
+				A429955A2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -212,6 +221,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A42995592F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md in Resources */,
+				A429955B2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

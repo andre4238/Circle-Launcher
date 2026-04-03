@@ -12,6 +12,7 @@ import SwiftData
 class RadialMenuPanel: NSPanel {
     var modelContainer: ModelContainer?
     private var mouseTrackingTimer: Timer?
+    var onEscapeClose: (() -> Void)?  // Callback für Escape-Taste
     
     override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
         super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
@@ -48,7 +49,7 @@ class RadialMenuPanel: NSPanel {
     private func setupEscapeKeyHandling() {
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // Escape key
-                self?.close()
+                self?.onEscapeClose?() // Rufe den Callback auf
                 return nil
             }
             return event
