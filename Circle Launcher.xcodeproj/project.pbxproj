@@ -10,6 +10,8 @@
 		A42995592F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md in Resources */ = {isa = PBXBuildFile; fileRef = A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */; };
 		A429955B2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md in Resources */ = {isa = PBXBuildFile; fileRef = A429955A2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md */; };
 		A429955D2F80583E00126F05 /* KLEINERER_CIRCLE.md in Resources */ = {isa = PBXBuildFile; fileRef = A429955C2F80583E00126F05 /* KLEINERER_CIRCLE.md */; };
+		A429955F2F8058C600126F05 /* TRANSPARENTER_CENTER_CIRCLE.md in Resources */ = {isa = PBXBuildFile; fileRef = A429955E2F8058C600126F05 /* TRANSPARENTER_CENTER_CIRCLE.md */; };
+		A42995612F80593A00126F05 /* DONUT_LOCH_MITTE.md in Resources */ = {isa = PBXBuildFile; fileRef = A42995602F80593A00126F05 /* DONUT_LOCH_MITTE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +38,8 @@
 		A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AENDERUNGEN_HOVER_LAUNCH.md; sourceTree = "<group>"; };
 		A429955A2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FIX_HOVER_ALLE_APPS.md; sourceTree = "<group>"; };
 		A429955C2F80583E00126F05 /* KLEINERER_CIRCLE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = KLEINERER_CIRCLE.md; sourceTree = "<group>"; };
+		A429955E2F8058C600126F05 /* TRANSPARENTER_CENTER_CIRCLE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TRANSPARENTER_CENTER_CIRCLE.md; sourceTree = "<group>"; };
+		A42995602F80593A00126F05 /* DONUT_LOCH_MITTE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DONUT_LOCH_MITTE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -91,6 +95,8 @@
 				A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */,
 				A429955A2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md */,
 				A429955C2F80583E00126F05 /* KLEINERER_CIRCLE.md */,
+				A429955E2F8058C600126F05 /* TRANSPARENTER_CENTER_CIRCLE.md */,
+				A42995602F80593A00126F05 /* DONUT_LOCH_MITTE.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -225,8 +231,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				A42995592F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md in Resources */,
+				A429955F2F8058C600126F05 /* TRANSPARENTER_CENTER_CIRCLE.md in Resources */,
 				A429955D2F80583E00126F05 /* KLEINERER_CIRCLE.md in Resources */,
 				A429955B2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md in Resources */,
+				A42995612F80593A00126F05 /* DONUT_LOCH_MITTE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

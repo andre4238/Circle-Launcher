@@ -27,28 +27,25 @@ struct RadialMenuView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Background with blur effect
+                // Background with blur effect - mit Loch in der Mitte (Donut-Form)
                 VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                    .clipShape(Circle())
-                    .frame(width: radius * 2 + 80, height: radius * 2 + 80)  // Reduziert von +100 → kompakter
+                    .frame(width: radius * 2 + 80, height: radius * 2 + 80)
+                    .mask(
+                        // Donut-Maske: Großer Kreis minus kleiner Kreis in der Mitte
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                            
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: centerCircleRadius * 2, height: centerCircleRadius * 2)
+                                .blendMode(.destinationOut)
+                        }
+                        .compositingGroup()
+                    )
                 
                 // LINIEN ENTFERNT - Kein Canvas mehr
-                
-                // Center circle
-                ZStack {
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                        )
-                    
-                    Image(systemName: "app.dashed")
-                        .font(.system(size: 18))  // Reduziert von 24 → kleineres Icon
-                        .foregroundStyle(.secondary)
-                }
-                .frame(width: centerCircleRadius * 2, height: centerCircleRadius * 2)
-                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+                // CENTER CIRCLE ist jetzt ein LOCH - Man sieht durch!
                 
                 // App items
                 ForEach(Array(apps.enumerated()), id: \.element.id) { index, app in
