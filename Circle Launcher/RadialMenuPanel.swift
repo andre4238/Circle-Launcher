@@ -13,6 +13,7 @@ class RadialMenuPanel: NSPanel {
     var modelContainer: ModelContainer?
     private var mouseTrackingTimer: Timer?
     var onEscapeClose: (() -> Void)?  // Callback für Escape-Taste
+    private var localEventMonitor: Any?  // Store the event monitor
     
     override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
         super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
@@ -32,24 +33,46 @@ class RadialMenuPanel: NSPanel {
         setupEscapeKeyHandling()
     }
     
+    deinit {
+        // Cleanup event monitor
+        if let monitor = localEventMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        stopMouseTracking()
+    }
+    
     private func setupContentView() {
-        let radialMenuView = RadialMenuView(
-            onHoverChange: { _ in },
-            onClose: { [weak self] in
-                self?.close()
-            }
-        )
-        
-        let hostingView = NSHostingView(rootView: radialMenuView)
-        hostingView.frame = contentRect(forFrameRect: frame)
-        
-        self.contentView = hostingView
+        // Sicherstellen, dass wir auf dem Main Thread sind
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let radialMenuView = RadialMenuView(
+                onHoverChange: { _ in },
+                onClose: { [weak self] in
+                    DispatchQueue.main.async {
+                        self?.close()
+                    }
+                }
+            )
+            
+            let hostingView = NSHostingView(rootView: radialMenuView)
+            hostingView.frame = self.contentRect(forFrameRect: self.frame)
+            
+            self.contentView = hostingView
+        }
     }
     
     private func setupEscapeKeyHandling() {
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        // Remove old monitor if exists
+        if let monitor = localEventMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // Escape key
-                self?.onEscapeClose?() // Rufe den Callback auf
+                DispatchQueue.main.async {
+                    self?.onEscapeClose?()
+                }
                 return nil
             }
             return event
@@ -57,35 +80,53 @@ class RadialMenuPanel: NSPanel {
     }
     
     override func makeKeyAndOrderFront(_ sender: Any?) {
+        // Call super first, before async block
         super.makeKeyAndOrderFront(sender)
         
-        // Update the hosting view with fresh data
-        if let container = modelContainer {
-            let radialMenuView = RadialMenuView(
-                onHoverChange: { _ in },
-                onClose: { [weak self] in
-                    self?.close()
-                }
-            )
-            .modelContainer(container)
+        // Then update content on main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
             
-            let hostingView = NSHostingView(rootView: radialMenuView)
-            hostingView.frame = contentRect(forFrameRect: frame)
-            self.contentView = hostingView
+            // Update the hosting view with fresh data
+            if let container = self.modelContainer {
+                let radialMenuView = RadialMenuView(
+                    onHoverChange: { _ in },
+                    onClose: { [weak self] in
+                        DispatchQueue.main.async {
+                            self?.close()
+                        }
+                    }
+                )
+                .modelContainer(container)
+                
+                let hostingView = NSHostingView(rootView: radialMenuView)
+                hostingView.frame = self.contentRect(forFrameRect: self.frame)
+                self.contentView = hostingView
+            }
         }
-        
-        // Mouse tracking ist deaktiviert - Menü schließt nur beim Loslassen der Tasten
-        // startMouseTracking()
     }
     
     override func close() {
+        // Direkte Ausführung, Thread-Check intern
         stopMouseTracking()
-        super.close()
+        
+        if Thread.isMainThread {
+            super.close()
+        } else {
+            // Use sync to ensure it happens on main thread immediately
+            DispatchQueue.main.sync {
+                super.close()
+            }
+        }
     }
     
     private func startMouseTracking() {
-        mouseTrackingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            self?.checkMousePosition()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.mouseTrackingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                self?.checkMousePosition()
+            }
         }
     }
     
@@ -105,7 +146,9 @@ class RadialMenuPanel: NSPanel {
         
         // Close if mouse is far from the menu (more than half the panel size)
         if distance > panelFrame.width / 2 + 50 {
-            self.close()
+            DispatchQueue.main.async { [weak self] in
+                self?.close()
+            }
         }
     }
     

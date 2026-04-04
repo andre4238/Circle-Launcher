@@ -199,29 +199,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func closeRadialMenu() {
         guard let panel = radialMenuPanel else { return }
-        if panel.isVisible {
+        
+        // Sicherstellen, dass wir auf dem Main Thread sind
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            guard panel.isVisible else { return }
+            
             // Wenn eine App gehovert ist, starte sie
-            if let app = hoveredApp {
+            if let app = self.hoveredApp {
                 app.launch()
                 print("🚀 App gestartet: \(app.name)")
             }
             
             panel.close()
-            isLauncherOpen = false
-            launcherOpenPosition = nil
-            hoveredApp = nil // Reset nach dem Schließen
+            self.isLauncherOpen = false
+            self.launcherOpenPosition = nil
+            self.hoveredApp = nil // Reset nach dem Schließen
         }
     }
     
     private func forceCloseRadialMenu() {
-        // Schließt das Menü OHNE App zu starten (z.B. bei Escape)
         guard let panel = radialMenuPanel else { return }
-        if panel.isVisible {
+        
+        // Sicherstellen, dass wir auf dem Main Thread sind
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            guard panel.isVisible else { return }
+            
             print("❌ Menü abgebrochen ohne App zu starten")
             panel.close()
-            isLauncherOpen = false
-            launcherOpenPosition = nil
-            hoveredApp = nil // Reset ohne App zu starten
+            self.isLauncherOpen = false
+            self.launcherOpenPosition = nil
+            self.hoveredApp = nil // Reset ohne App zu starten
         }
     }
     
@@ -241,53 +250,58 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func showRadialMenuAtCursor() {
         guard let panel = radialMenuPanel else { return }
         
-        // Nur Position beim ersten Öffnen speichern
-        if launcherOpenPosition == nil {
-            launcherOpenPosition = NSEvent.mouseLocation
-        }
-        
-        // Verwende die gespeicherte Position
-        guard let openPosition = launcherOpenPosition else { return }
-        
-        // Update content view with fresh data from model container
-        let radialMenuView = RadialMenuView(
-            onHoverChange: { [weak self] app in
-                self?.hoveredApp = app
-                if let app = app {
-                    print("🎯 Hovering: \(app.name)")
-                } else {
-                    print("❌ Kein Hover")
-                }
-            },
-            onClose: { [weak self] in
-                self?.closeRadialMenu()
+        // Sicherstellen, dass wir auf dem Main Thread sind
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Nur Position beim ersten Öffnen speichern
+            if self.launcherOpenPosition == nil {
+                self.launcherOpenPosition = NSEvent.mouseLocation
             }
-        )
-        .modelContainer(modelContainer)
-        
-        let hostingView = NSHostingView(rootView: radialMenuView)
-        hostingView.frame = panel.contentRect(forFrameRect: panel.frame)
-        panel.contentView = hostingView
-        
-        // Center panel auf der gespeicherten Position
-        let panelSize = panel.frame.size
-        let origin = NSPoint(
-            x: openPosition.x - panelSize.width / 2,
-            y: openPosition.y - panelSize.height / 2
-        )
-        
-        panel.setFrameOrigin(origin)
-        panel.orderFrontRegardless()
-        panel.makeKey()
-        isLauncherOpen = true
-        
-        // Debug: Apps zählen
-        let context = ModelContext(modelContainer)
-        let descriptor = FetchDescriptor<AppItem>()
-        if let apps = try? context.fetch(descriptor) {
-            print("🔍 Launcher zeigt \(apps.count) Apps an")
-            for app in apps {
-                print("  - \(app.name) (\(app.bundleIdentifier))")
+            
+            // Verwende die gespeicherte Position
+            guard let openPosition = self.launcherOpenPosition else { return }
+            
+            // Update content view with fresh data from model container
+            let radialMenuView = RadialMenuView(
+                onHoverChange: { [weak self] app in
+                    self?.hoveredApp = app
+                    if let app = app {
+                        print("🎯 Hovering: \(app.name)")
+                    } else {
+                        print("❌ Kein Hover")
+                    }
+                },
+                onClose: { [weak self] in
+                    self?.closeRadialMenu()
+                }
+            )
+            .modelContainer(self.modelContainer)
+            
+            let hostingView = NSHostingView(rootView: radialMenuView)
+            hostingView.frame = panel.contentRect(forFrameRect: panel.frame)
+            panel.contentView = hostingView
+            
+            // Center panel auf der gespeicherten Position
+            let panelSize = panel.frame.size
+            let origin = NSPoint(
+                x: openPosition.x - panelSize.width / 2,
+                y: openPosition.y - panelSize.height / 2
+            )
+            
+            panel.setFrameOrigin(origin)
+            panel.orderFrontRegardless()
+            panel.makeKey()
+            self.isLauncherOpen = true
+            
+            // Debug: Apps zählen (nur wenn nicht schon geladen)
+            let context = ModelContext(self.modelContainer)
+            let descriptor = FetchDescriptor<AppItem>()
+            if let apps = try? context.fetch(descriptor) {
+                print("🔍 Launcher zeigt \(apps.count) Apps an")
+                for app in apps {
+                    print("  - \(app.name) (\(app.bundleIdentifier))")
+                }
             }
         }
     }
