@@ -20,6 +20,8 @@ struct RadialMenuView: View {
     @State private var mouseLocation: CGPoint = .zero
     @State private var trackingMouseLocation = false
     @AppStorage("circleRadius") private var circleRadius: Double = 80.0  // UserDefaults Einstellung
+    @AppStorage("iconSize") private var iconSize: Double = 32.0  // UserDefaults für Icon-Größe
+    @AppStorage("showAppNames") private var showAppNames: Bool = true  // UserDefaults für Namen anzeigen
     
     // Abgeleitete Werte basierend auf circleRadius
     private var centerCircleRadius: CGFloat {
@@ -68,7 +70,9 @@ struct RadialMenuView: View {
                     
                     AppItemView(
                         app: app,
-                        isHovered: hoveredIndex == index
+                        isHovered: hoveredIndex == index,
+                        iconSize: iconSize,
+                        showAppName: showAppNames
                     )
                     .frame(width: itemSize, height: itemSize)
                     .position(position)
@@ -147,6 +151,8 @@ struct RadialMenuView: View {
 struct AppItemView: View {
     let app: AppItem
     let isHovered: Bool
+    let iconSize: Double
+    let showAppName: Bool
     
     var body: some View {
         VStack(spacing: 3) {
@@ -154,18 +160,21 @@ struct AppItemView: View {
             Image(nsImage: app.icon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 32, height: 32)  // Etwas größer da kein Circle mehr
+                .frame(width: iconSize, height: iconSize)  // Dynamische Icon-Größe
                 .scaleEffect(isHovered ? 1.2 : 1.0)  // Mehr Scale-Effekt beim Hover
                 .shadow(color: isHovered ? .accentColor.opacity(0.6) : .black.opacity(0.3), radius: isHovered ? 12 : 4)
                 .shadow(color: .black.opacity(0.5), radius: 2)  // Zweiter Shadow für Tiefe
             
-            Text(app.name)
-                .font(.caption2)
-                .fontWeight(isHovered ? .bold : .semibold)  // Bold beim Hover
-                .foregroundColor(.white)
-                .shadow(color: .black.opacity(0.7), radius: 2)
-                .lineLimit(1)
-                .frame(maxWidth: 70)
+            // App-Name nur anzeigen wenn aktiviert
+            if showAppName {
+                Text(app.name)
+                    .font(.caption2)
+                    .fontWeight(isHovered ? .bold : .semibold)  // Bold beim Hover
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.7), radius: 2)
+                    .lineLimit(1)
+                    .frame(maxWidth: 70)
+            }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
     }

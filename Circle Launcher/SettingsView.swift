@@ -18,6 +18,8 @@ struct SettingsView: View {
     @State private var selectedApp: AppItem?
     @State private var showingAddSheet = false
     @AppStorage("circleRadius") private var circleRadius: Double = 80.0  // Standard: 80
+    @AppStorage("iconSize") private var iconSize: Double = 32.0  // Standard: 32
+    @AppStorage("showAppNames") private var showAppNames: Bool = true  // Standard: An
     @State private var launchAtLogin: Bool = LaunchAtLoginManager.shared.isEnabled
     
     var body: some View {
@@ -216,6 +218,85 @@ struct SettingsView: View {
                 }
                 
                 Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Icon Size")
+                                .font(.headline)
+                            
+                            Spacer()
+                            
+                            Text("\(Int(iconSize)) px")
+                                .font(.system(.body, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        Slider(value: $iconSize, in: 20...64, step: 4) {
+                            Text("Icon Size")
+                        }
+                        
+                        HStack(spacing: 8) {
+                            Button("Small") {
+                                iconSize = 24
+                            }
+                            .buttonStyle(.bordered)
+                            
+                            Button("Medium") {
+                                iconSize = 32
+                            }
+                            .buttonStyle(.bordered)
+                            
+                            Button("Large") {
+                                iconSize = 48
+                            }
+                            .buttonStyle(.bordered)
+                            
+                            Button("Extra Large") {
+                                iconSize = 64
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .font(.caption)
+                        
+                        Text("Adjust the size of app icons in the launcher")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 8)
+                } header: {
+                    Text("Icon Size")
+                } footer: {
+                    Text("Larger icons are easier to see, smaller icons take up less space")
+                }
+                
+                Section {
+                    Toggle(isOn: $showAppNames) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Show App Names")
+                                .font(.headline)
+                            
+                            Text("Display app names below icons")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    
+                    HStack {
+                        Image(systemName: showAppNames ? "textformat" : "textformat.abc")
+                            .foregroundStyle(showAppNames ? .blue : .secondary)
+                        
+                        Text(showAppNames ? "Names are visible" : "Icons only")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("App Names")
+                } footer: {
+                    Text("Hide names for a cleaner, more minimalist look")
+                }
+                
+                Section {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Image(systemName: "circle")
@@ -247,14 +328,16 @@ struct SettingsView: View {
             
             // Footer
             HStack {
-                Text("💡 Tip: Larger circles work better with more apps")
+                Text("💡 Tip: Customize the look to match your workflow")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 
                 Spacer()
                 
-                Button("Reset to Default") {
+                Button("Reset All to Default") {
                     circleRadius = 80
+                    iconSize = 32
+                    showAppNames = true
                 }
                 .buttonStyle(.bordered)
             }
