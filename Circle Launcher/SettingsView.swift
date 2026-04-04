@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 import AppKit
 import UniformTypeIdentifiers
+import ServiceManagement
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
@@ -17,6 +18,7 @@ struct SettingsView: View {
     @State private var selectedApp: AppItem?
     @State private var showingAddSheet = false
     @AppStorage("circleRadius") private var circleRadius: Double = 80.0  // Standard: 80
+    @State private var launchAtLogin: Bool = LaunchAtLoginManager.shared.isEnabled
     
     var body: some View {
         VStack(spacing: 0) {
@@ -32,6 +34,12 @@ struct SettingsView: View {
                 appearanceTab
                     .tabItem {
                         Label("Appearance", systemImage: "slider.horizontal.3")
+                    }
+                
+                // Tab 3: General
+                generalTab
+                    .tabItem {
+                        Label("General", systemImage: "gearshape")
                     }
             }
         }
@@ -266,6 +274,180 @@ struct SettingsView: View {
             return "Large"
         default:
             return "Extra Large"
+        }
+    }
+    
+    // MARK: - General Tab
+    
+    private var generalTab: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(alignment: .leading, spacing: 8) {
+                Text("General Settings")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                
+                Text("Configure app behavior and system integration")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            
+            Divider()
+            
+            // Settings Content
+            Form {
+                Section {
+                    Toggle(isOn: $launchAtLogin) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Launch at Login")
+                                .font(.headline)
+                            
+                            Text("Automatically start Circle Launcher when you log in")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    .onChange(of: launchAtLogin) { oldValue, newValue in
+                        LaunchAtLoginManager.shared.isEnabled = newValue
+                    }
+                    
+                    // Status-Anzeige
+                    HStack {
+                        Image(systemName: launchAtLogin ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundStyle(launchAtLogin ? .green : .secondary)
+                        
+                        Text("Status: \(LaunchAtLoginManager.shared.statusDescription)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                    
+                } header: {
+                    Text("Startup")
+                } footer: {
+                    if #available(macOS 13.0, *) {
+                        if SMAppService.mainApp.status == .requiresApproval {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("⚠️ Approval Required")
+                                    .foregroundStyle(.orange)
+                                    .fontWeight(.semibold)
+                                
+                                Text("Circle Launcher needs your permission to start at login. Please approve this in System Settings.")
+                                    .foregroundStyle(.secondary)
+                                
+                                Button("Open Login Items Settings") {
+                                    LaunchAtLoginManager.shared.openLoginItemsSettings()
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                            .padding(.top, 8)
+                        } else {
+                            Text("Circle Launcher will start automatically in the background when you log in to your Mac.")
+                        }
+                    }
+                }
+                
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "keyboard")
+                                .font(.title2)
+                                .foregroundStyle(.blue)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Global Hotkey")
+                                    .font(.headline)
+                                
+                                Text("Press ⌥⌘ (Option + Command)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            
+                            Spacer()
+                        }
+                        
+                        Divider()
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("How to use:")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            
+                            HStack(spacing: 8) {
+                                Label("Press & Hold", systemImage: "hand.tap")
+                                Text("⌥⌘")
+                                    .font(.system(.body, design: .monospaced))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.accentColor.opacity(0.1))
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                            .font(.caption)
+                            
+                            HStack(spacing: 8) {
+                                Label("Hover", systemImage: "cursorarrow.rays")
+                                Text("Over your app")
+                            }
+                            .font(.caption)
+                            
+                            HStack(spacing: 8) {
+                                Label("Release", systemImage: "hand.raised")
+                                Text("Keys to launch")
+                            }
+                            .font(.caption)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .padding(.vertical, 8)
+                } header: {
+                    Text("Keyboard Shortcuts")
+                } footer: {
+                    Text("The global hotkey requires Accessibility permissions. Check in System Settings → Privacy & Security → Accessibility.")
+                }
+                
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "info.circle")
+                                .foregroundStyle(.blue)
+                            
+                            Text("About Circle Launcher")
+                                .font(.headline)
+                        }
+                        
+                        Divider()
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            infoRow(label: "Version", value: "1.0.0")
+                            infoRow(label: "Build", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown")
+                            infoRow(label: "macOS", value: "13.0+")
+                        }
+                    }
+                    .padding(.vertical, 8)
+                } header: {
+                    Text("About")
+                }
+            }
+            .formStyle(.grouped)
+            
+            Spacer()
+        }
+    }
+    
+    private func infoRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            
+            Spacer()
+            
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
         }
     }
     

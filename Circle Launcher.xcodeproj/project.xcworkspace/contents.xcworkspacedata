@@ -10,4 +10,19 @@
    <FileRef
       location = "group:KRITISCHER_FIX_BUNDLE.md">
    </FileRef>
+   <FileRef
+      location = "group:Info.plist">
+   </FileRef>
+   <FileRef
+      location = "group:ENDGUELTIGE_LOESUNG_BUNDLE.md">
+   </FileRef>
+   <FileRef
+      location = "group:DIAGNOSE_DOPPELTE_BUNDLES.md">
+   </FileRef>
+   <FileRef
+      location = "group:QUICK_FIX.md">
+   </FileRef>
+   <FileRef
+      location = "group:DEBUG_PHASE_1.md">
+   </FileRef>
 </Workspace>

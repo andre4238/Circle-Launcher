@@ -20,12 +20,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var launcherOpenPosition: NSPoint? // Position wo Launcher geöffnet wurde
     var hoveredApp: AppItem? // Aktuell gehoverte App
     
+    // DEBUG: Verhindert automatisches Schließen beim Loslassen der Tasten
+    var debugKeepOpen = false
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Setup model container
         setupModelContainer()
         
         // Setup status bar icon (hidden by default, but can be shown via right-click)
         setupStatusBar()
+        
+        // Enable launch at login on first start
+        LaunchAtLoginManager.shared.enableOnFirstLaunch()
         
         // Register global hotkey FIRST (this triggers the permission prompt)
         registerGlobalHotkey()
@@ -98,6 +104,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         let menu = NSMenu()
         
+        // DEBUG: Toggle für "Circle offen halten" Modus
+        let debugItem = NSMenuItem(title: "🐛 Debug: Circle offen halten", action: #selector(toggleDebugKeepOpen), keyEquivalent: "")
+        menu.addItem(debugItem)
+        menu.addItem(NSMenuItem.separator())
+        
         // Debug menu item to test without hotkey
         menu.addItem(NSMenuItem(title: "Launcher anzeigen (Test)", action: #selector(toggleRadialMenu), keyEquivalent: "t"))
         menu.addItem(NSMenuItem.separator())
@@ -151,8 +162,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     self?.showRadialMenuAtCursor()
                 }
             } else {
-                // Wenn Option oder Command losgelassen wird, Menü schließen
-                if self?.isLauncherOpen == true {
+                // DEBUG: Nur schließen wenn debugKeepOpen NICHT aktiv ist
+                if self?.isLauncherOpen == true && self?.debugKeepOpen == false {
                     self?.closeRadialMenu()
                 }
             }
@@ -167,8 +178,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     self?.showRadialMenuAtCursor()
                 }
             } else {
-                // Wenn Option oder Command losgelassen wird, Menü schließen
-                if self?.isLauncherOpen == true {
+                // DEBUG: Nur schließen wenn debugKeepOpen NICHT aktiv ist
+                if self?.isLauncherOpen == true && self?.debugKeepOpen == false {
                     self?.closeRadialMenu()
                 }
             }
@@ -372,6 +383,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+    
+    @objc private func toggleDebugKeepOpen() {
+        debugKeepOpen.toggle()
+        
+        let status = debugKeepOpen ? "AKTIVIERT ✅" : "DEAKTIVIERT ❌"
+        print("🐛 DEBUG Modus: Circle offen halten - \(status)")
+        
+        // Aktualisiere Menu Item Text
+        if let menuItem = statusItem?.menu?.item(withTitle: "🐛 Debug: Circle offen halten") {
+            menuItem.title = debugKeepOpen ? "🐛 Debug: Circle offen halten ✅" : "🐛 Debug: Circle offen halten"
+        }
+        
+        // Zeige Alert
+        let alert = NSAlert()
+        alert.messageText = "Debug-Modus: Circle offen halten"
+        if debugKeepOpen {
+            alert.informativeText = """
+            ✅ AKTIVIERT
+            
+            Der Circle wird sich jetzt NICHT mehr automatisch schließen, wenn Sie die Tasten loslassen.
+            
+            So funktioniert es:
+            • Drücken Sie ⌥⌘ um den Circle zu öffnen
+            • Lassen Sie die Tasten los - Circle bleibt offen! 🎉
+            • Klicken Sie auf eine App oder drücken Sie ESC zum Schließen
+            
+            Nützlich für:
+            • Testen und Debuggen
+            • Screenshots machen
+            • Design-Anpassungen überprüfen
+            """
+            alert.alertStyle = .informational
+        } else {
+            alert.informativeText = """
+            ❌ DEAKTIVIERT
+            
+            Normales Verhalten wiederhergestellt.
+            
+            Der Circle schließt sich wieder automatisch, wenn Sie ⌥⌘ loslassen.
+            """
+            alert.alertStyle = .warning
+        }
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 }
 

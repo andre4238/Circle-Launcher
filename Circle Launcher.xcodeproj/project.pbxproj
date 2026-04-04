@@ -6,15 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		A42995592F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md in Resources */ = {isa = PBXBuildFile; fileRef = A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */; };
-		A429955B2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md in Resources */ = {isa = PBXBuildFile; fileRef = A429955A2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md */; };
-		A429955D2F80583E00126F05 /* KLEINERER_CIRCLE.md in Resources */ = {isa = PBXBuildFile; fileRef = A429955C2F80583E00126F05 /* KLEINERER_CIRCLE.md */; };
-		A429955F2F8058C600126F05 /* TRANSPARENTER_CENTER_CIRCLE.md in Resources */ = {isa = PBXBuildFile; fileRef = A429955E2F8058C600126F05 /* TRANSPARENTER_CENTER_CIRCLE.md */; };
-		A42995612F80593A00126F05 /* DONUT_LOCH_MITTE.md in Resources */ = {isa = PBXBuildFile; fileRef = A42995602F80593A00126F05 /* DONUT_LOCH_MITTE.md */; };
-		A42995632F8059C100126F05 /* KREISE_ENTFERNT.md in Resources */ = {isa = PBXBuildFile; fileRef = A42995622F8059C100126F05 /* KREISE_ENTFERNT.md */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		A42994E62F80469B00126F05 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -33,7 +24,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		A42994D62F80469900126F05 /* Circle Launcher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Circle Launcher.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A42994D62F80469900126F05 /* CircleLauncher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CircleLauncher.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A42994E52F80469B00126F05 /* Circle LauncherTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Circle LauncherTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A42994EF2F80469B00126F05 /* Circle LauncherUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Circle LauncherUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A42995582F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AENDERUNGEN_HOVER_LAUNCH.md; sourceTree = "<group>"; };
@@ -44,9 +35,33 @@
 		A42995622F8059C100126F05 /* KREISE_ENTFERNT.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = KREISE_ENTFERNT.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A4EED36A2F807E72006652C7 /* Exceptions for "Circle Launcher" folder in "Circle Launcher" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				APPICON_PROBLEM_BEHEBEN.md,
+				BUILD_GUIDE.md,
+				FEATURE_EINSTELLBARE_GROESSE.md,
+				IMPLEMENTATION.md,
+				KEIN_DOCK_ICON.md,
+				NEUES_VERHALTEN.md,
+				QUICKREF.md,
+				QUICKSTART.md,
+				README.md,
+				SETUP.md,
+				SUMMARY.md,
+				VISUAL_GUIDE.md,
+			);
+			target = A42994D52F80469900126F05 /* Circle Launcher */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A42994D82F80469900126F05 /* Circle Launcher */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A4EED36A2F807E72006652C7 /* Exceptions for "Circle Launcher" folder in "Circle Launcher" target */,
+			);
 			path = "Circle Launcher";
 			sourceTree = "<group>";
 		};
@@ -106,7 +121,7 @@
 		A42994D72F80469900126F05 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A42994D62F80469900126F05 /* Circle Launcher.app */,
+				A42994D62F80469900126F05 /* CircleLauncher.app */,
 				A42994E52F80469B00126F05 /* Circle LauncherTests.xctest */,
 				A42994EF2F80469B00126F05 /* Circle LauncherUITests.xctest */,
 			);
@@ -135,7 +150,7 @@
 			packageProductDependencies = (
 			);
 			productName = "Circle Launcher";
-			productReference = A42994D62F80469900126F05 /* Circle Launcher.app */;
+			productReference = A42994D62F80469900126F05 /* CircleLauncher.app */;
 			productType = "com.apple.product-type.application";
 		};
 		A42994E42F80469B00126F05 /* Circle LauncherTests */ = {
@@ -233,12 +248,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A42995592F80563C00126F05 /* AENDERUNGEN_HOVER_LAUNCH.md in Resources */,
-				A42995632F8059C100126F05 /* KREISE_ENTFERNT.md in Resources */,
-				A429955F2F8058C600126F05 /* TRANSPARENTER_CENTER_CIRCLE.md in Resources */,
-				A429955D2F80583E00126F05 /* KLEINERER_CIRCLE.md in Resources */,
-				A429955B2F80570B00126F05 /* FIX_HOVER_ALLE_APPS.md in Resources */,
-				A42995612F80593A00126F05 /* DONUT_LOCH_MITTE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -424,13 +433,14 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.1;
+				CURRENT_PROJECT_VERSION = 1.2;
 				DEVELOPMENT_TEAM = XG5FB25GS8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Circle Launcher";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -438,9 +448,9 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
-				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.andre.CircleLauncher;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = 1.1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.andre.CircleLauncher1;
+				PRODUCT_NAME = CircleLauncher;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -459,13 +469,14 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.1;
+				CURRENT_PROJECT_VERSION = 1.2;
 				DEVELOPMENT_TEAM = XG5FB25GS8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Circle Launcher";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -473,9 +484,9 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
-				MARKETING_VERSION = 1.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.andre.CircleLauncher;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = 1.1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.andre.CircleLauncher1;
+				PRODUCT_NAME = CircleLauncher;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -496,7 +507,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "andre.Circle-LauncherTests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.andre.CircleLauncherTests1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -517,7 +528,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "andre.Circle-LauncherTests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.andre.CircleLauncherTests1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -536,7 +547,7 @@
 				DEVELOPMENT_TEAM = XG5FB25GS8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "andre.Circle-LauncherUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.andre.CircleLauncherUITests1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -555,7 +566,7 @@
 				DEVELOPMENT_TEAM = XG5FB25GS8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "andre.Circle-LauncherUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.andre.CircleLauncherUITests1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
