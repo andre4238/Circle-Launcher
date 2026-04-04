@@ -10,6 +10,106 @@ import SwiftUI
 import SwiftData
 import Carbon
 
+/// Manager für globale Hotkey-Konfiguration
+class HotkeyManager {
+    
+    /// Singleton-Instanz
+    static let shared = HotkeyManager()
+    
+    private init() {}
+    
+    // MARK: - Hotkey Configuration
+    
+    /// Verfügbare Modifier-Kombinationen
+    enum ModifierCombination: String, CaseIterable, Identifiable {
+        case optionCommand = "⌥⌘ (Option + Command)"
+        case controlOption = "⌃⌥ (Control + Option)"
+        case controlCommand = "⌃⌘ (Control + Command)"
+        case shiftCommand = "⇧⌘ (Shift + Command)"
+        case shiftOption = "⇧⌥ (Shift + Option)"
+        case controlShift = "⌃⇧ (Control + Shift)"
+        
+        var id: String { rawValue }
+        
+        /// NSEvent.ModifierFlags für diese Kombination
+        var modifierFlags: NSEvent.ModifierFlags {
+            switch self {
+            case .optionCommand:
+                return [.option, .command]
+            case .controlOption:
+                return [.control, .option]
+            case .controlCommand:
+                return [.control, .command]
+            case .shiftCommand:
+                return [.shift, .command]
+            case .shiftOption:
+                return [.shift, .option]
+            case .controlShift:
+                return [.control, .shift]
+            }
+        }
+        
+        /// Display-Name (kurz)
+        var displayName: String {
+            switch self {
+            case .optionCommand:
+                return "⌥⌘"
+            case .controlOption:
+                return "⌃⌥"
+            case .controlCommand:
+                return "⌃⌘"
+            case .shiftCommand:
+                return "⇧⌘"
+            case .shiftOption:
+                return "⇧⌥"
+            case .controlShift:
+                return "⌃⇧"
+            }
+        }
+        
+        /// Beschreibung für UI
+        var description: String {
+            switch self {
+            case .optionCommand:
+                return "Option + Command (Standard)"
+            case .controlOption:
+                return "Control + Option"
+            case .controlCommand:
+                return "Control + Command"
+            case .shiftCommand:
+                return "Shift + Command"
+            case .shiftOption:
+                return "Shift + Option"
+            case .controlShift:
+                return "Control + Shift"
+            }
+        }
+    }
+    
+    /// Aktuell konfigurierte Modifier-Kombination
+    var currentModifiers: ModifierCombination {
+        get {
+            let savedRawValue = UserDefaults.standard.string(forKey: "hotkeyModifiers") ?? ModifierCombination.optionCommand.rawValue
+            return ModifierCombination(rawValue: savedRawValue) ?? .optionCommand
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: "hotkeyModifiers")
+            print("⌨️ Hotkey geändert zu: \(newValue.displayName)")
+        }
+    }
+    
+    /// Prüft, ob die aktuell gedrückten Modifier dem konfigurierten Hotkey entsprechen
+    func matchesCurrentHotkey(_ modifiers: NSEvent.ModifierFlags) -> Bool {
+        let currentFlags = currentModifiers.modifierFlags
+        return modifiers.contains(currentFlags)
+    }
+    
+    /// Gibt die aktuellen Modifier-Flags zurück
+    var currentModifierFlags: NSEvent.ModifierFlags {
+        return currentModifiers.modifierFlags
+    }
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var radialMenuPanel: RadialMenuPanel?
@@ -18,10 +118,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var modelContainer: ModelContainer!
     var isLauncherOpen = false // Track ob Launcher offen ist
     var launcherOpenPosition: NSPoint? // Position wo Launcher geöffnet wurde
-    var hoveredApp: AppItem? // Aktuell gehoverte App
+    
+    // WICHTIG: Speichere nur primitive Werte, nicht SwiftData-Objekte
+    private var hoveredAppBundleID: String?
+    private var hoveredAppName: String?
     
     // DEBUG: Verhindert automatisches Schließen beim Loslassen der Tasten
     var debugKeepOpen = false
+    
+    deinit {
+        // Cleanup
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+    }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Setup model container
@@ -46,9 +156,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationWillTerminate(_ notification: Notification) {
+        // Cleanup bei Beendigung
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
         }
+        
+        // Panel schließen
+        radialMenuPanel?.close()
+        radialMenuPanel = nil
+        
+        // Settings Window schließen
+        settingsWindow?.delegate = nil
+        settingsWindow?.close()
+        settingsWindow = nil
     }
     
     private func setupModelContainer() {
@@ -140,7 +261,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         
         panel.modelContainer = modelContainer
-        panel.delegate = self
+        // NICHT als Delegate setzen - RadialMenuPanel ist ein NSPanel, kein NSWindow
         panel.onEscapeClose = { [weak self] in
             self?.forceCloseRadialMenu()
         }
@@ -200,37 +321,73 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func closeRadialMenu() {
         guard let panel = radialMenuPanel else { return }
         
-        // Sicherstellen, dass wir auf dem Main Thread sind
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            guard panel.isVisible else { return }
-            
+        if panel.isVisible {
             // Wenn eine App gehovert ist, starte sie
-            if let app = self.hoveredApp {
-                app.launch()
-                print("🚀 App gestartet: \(app.name)")
+            if let bundleID = hoveredAppBundleID, let appName = hoveredAppName {
+                // App direkt starten OHNE SwiftData-Zugriff
+                launchApp(bundleID: bundleID, name: appName)
             }
             
-            panel.close()
-            self.isLauncherOpen = false
-            self.launcherOpenPosition = nil
-            self.hoveredApp = nil // Reset nach dem Schließen
+            // Panel schließen auf Main Thread
+            if Thread.isMainThread {
+                panel.close()
+            } else {
+                DispatchQueue.main.async {
+                    panel.close()
+                }
+            }
+            
+            isLauncherOpen = false
+            launcherOpenPosition = nil
+            hoveredAppBundleID = nil
+            hoveredAppName = nil
         }
     }
     
     private func forceCloseRadialMenu() {
+        // Schließt das Menü OHNE App zu starten (z.B. bei Escape)
         guard let panel = radialMenuPanel else { return }
         
-        // Sicherstellen, dass wir auf dem Main Thread sind
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            guard panel.isVisible else { return }
-            
+        if panel.isVisible {
             print("❌ Menü abgebrochen ohne App zu starten")
-            panel.close()
-            self.isLauncherOpen = false
-            self.launcherOpenPosition = nil
-            self.hoveredApp = nil // Reset ohne App zu starten
+            
+            // Panel schließen auf Main Thread
+            if Thread.isMainThread {
+                panel.close()
+            } else {
+                DispatchQueue.main.async {
+                    panel.close()
+                }
+            }
+            
+            isLauncherOpen = false
+            launcherOpenPosition = nil
+            hoveredAppBundleID = nil
+            hoveredAppName = nil
+        }
+    }
+    
+    // Hilfsmethode zum Starten einer App ohne SwiftData
+    private func launchApp(bundleID: String, name: String) {
+        DispatchQueue.main.async {
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
+            
+            guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else {
+                print("❌ App nicht gefunden: \(name) (\(bundleID))")
+                return
+            }
+            
+            NSWorkspace.shared.openApplication(
+                at: appURL,
+                configuration: configuration
+            ) { app, error in
+                if let error = error {
+                    print("❌ Fehler beim Starten von \(name): \(error.localizedDescription)")
+                } else {
+                    print("✅ App erfolgreich gestartet: \(name)")
+                }
+            }
         }
     }
     
@@ -248,84 +405,119 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func showRadialMenuAtCursor() {
+        // Sicherstellen dass wir auf Main Thread sind
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.showRadialMenuAtCursor()
+            }
+            return
+        }
+        
+        // Prüfe ob Panel-Größe sich geändert hat
+        let circleRadius = UserDefaults.standard.double(forKey: "circleRadius")
+        let radius = circleRadius > 0 ? circleRadius : 80.0
+        let expectedPanelSize = radius * 3.75
+        
+        // Wenn Panel nicht existiert ODER die Größe sich geändert hat, neu erstellen
+        if radialMenuPanel == nil || abs(radialMenuPanel!.frame.width - expectedPanelSize) > 1.0 {
+            print("🔄 Panel-Größe hat sich geändert - Erstelle neues Panel")
+            radialMenuPanel?.close()
+            radialMenuPanel = nil
+            setupRadialMenuPanel()
+        }
+        
         guard let panel = radialMenuPanel else { return }
         
-        // Sicherstellen, dass wir auf dem Main Thread sind
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            // Nur Position beim ersten Öffnen speichern
-            if self.launcherOpenPosition == nil {
-                self.launcherOpenPosition = NSEvent.mouseLocation
+        // Nur Position beim ersten Öffnen speichern
+        if launcherOpenPosition == nil {
+            launcherOpenPosition = NSEvent.mouseLocation
+        }
+        
+        // Verwende die gespeicherte Position
+        guard let openPosition = launcherOpenPosition else { return }
+        
+        // Update content view with fresh data from model container
+        let radialMenuView = RadialMenuView(
+            onHoverChange: { [weak self] app in
+                // Speichere nur primitive Werte, NICHT das SwiftData-Objekt!
+                self?.hoveredAppBundleID = app?.bundleIdentifier
+                self?.hoveredAppName = app?.name
+                if let app = app {
+                    print("🎯 Hovering: \(app.name)")
+                } else {
+                    print("❌ Kein Hover")
+                }
+            },
+            onClose: { [weak self] in
+                self?.closeRadialMenu()
             }
-            
-            // Verwende die gespeicherte Position
-            guard let openPosition = self.launcherOpenPosition else { return }
-            
-            // Update content view with fresh data from model container
-            let radialMenuView = RadialMenuView(
-                onHoverChange: { [weak self] app in
-                    self?.hoveredApp = app
-                    if let app = app {
-                        print("🎯 Hovering: \(app.name)")
-                    } else {
-                        print("❌ Kein Hover")
-                    }
-                },
-                onClose: { [weak self] in
-                    self?.closeRadialMenu()
-                }
-            )
-            .modelContainer(self.modelContainer)
-            
-            let hostingView = NSHostingView(rootView: radialMenuView)
-            hostingView.frame = panel.contentRect(forFrameRect: panel.frame)
-            panel.contentView = hostingView
-            
-            // Center panel auf der gespeicherten Position
-            let panelSize = panel.frame.size
-            let origin = NSPoint(
-                x: openPosition.x - panelSize.width / 2,
-                y: openPosition.y - panelSize.height / 2
-            )
-            
-            panel.setFrameOrigin(origin)
-            panel.orderFrontRegardless()
-            panel.makeKey()
-            self.isLauncherOpen = true
-            
-            // Debug: Apps zählen (nur wenn nicht schon geladen)
-            let context = ModelContext(self.modelContainer)
-            let descriptor = FetchDescriptor<AppItem>()
-            if let apps = try? context.fetch(descriptor) {
-                print("🔍 Launcher zeigt \(apps.count) Apps an")
-                for app in apps {
-                    print("  - \(app.name) (\(app.bundleIdentifier))")
-                }
+        )
+        .modelContainer(modelContainer)
+        
+        let hostingView = NSHostingView(rootView: radialMenuView)
+        hostingView.frame = panel.contentRect(forFrameRect: panel.frame)
+        panel.contentView = hostingView
+        
+        // Center panel auf der gespeicherten Position
+        let panelSize = panel.frame.size
+        let origin = NSPoint(
+            x: openPosition.x - panelSize.width / 2,
+            y: openPosition.y - panelSize.height / 2
+        )
+        
+        panel.setFrameOrigin(origin)
+        panel.orderFrontRegardless()
+        panel.makeKey()
+        isLauncherOpen = true
+        
+        // Debug: Apps zählen (mit neuem Context)
+        let debugContext = ModelContext(modelContainer)
+        let descriptor = FetchDescriptor<AppItem>()
+        if let apps = try? debugContext.fetch(descriptor) {
+            print("🔍 Launcher zeigt \(apps.count) Apps an")
+            for app in apps {
+                print("  - \(app.name) (\(app.bundleIdentifier))")
             }
         }
     }
     
     @objc private func openSettings() {
-        if settingsWindow == nil {
-            let settingsView = SettingsView()
-                .modelContainer(modelContainer)
-                .frame(minWidth: 600, minHeight: 400)
-            
-            let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
-                styleMask: [.titled, .closable, .resizable],
-                backing: .buffered,
-                defer: false
-            )
-            window.title = "Circle Launcher Settings"
-            window.contentView = NSHostingView(rootView: settingsView)
-            window.center()
-            
-            settingsWindow = window
+        // Sicherstellen dass wir auf Main Thread sind
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.openSettings()
+            }
+            return
         }
         
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        // Wenn Settings schon offen ist, nur nach vorne bringen
+        if let existingWindow = settingsWindow {
+            existingWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        
+        // Neues Settings Window erstellen
+        let settingsView = SettingsView()
+            .modelContainer(modelContainer)
+            .frame(minWidth: 600, minHeight: 400)
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Circle Launcher Settings"
+        window.contentView = NSHostingView(rootView: settingsView)
+        window.center()
+        window.delegate = self
+        
+        // Window released handler
+        window.isReleasedWhenClosed = false
+        
+        settingsWindow = window
+        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
     
@@ -447,8 +639,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 extension AppDelegate: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
-        if let window = notification.object as? NSWindow, window === settingsWindow {
-            settingsWindow = nil
+        // Sicher auf Main Thread ausführen
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.windowWillClose(notification)
+            }
+            return
+        }
+        
+        guard let window = notification.object as? NSWindow else {
+            return
+        }
+        
+        // Prüfe ob es sich um unser Settings Window handelt
+        if window === settingsWindow {
+            print("🪟 Settings Window wird geschlossen")
+            
+            // WICHTIG: Kleine Verzögerung vor dem Cleanup
+            // Das gibt SwiftData Zeit, Änderungen zu speichern
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                guard let self = self else { return }
+                self.settingsWindow?.delegate = nil
+                self.settingsWindow = nil
+                print("✅ Settings Window cleanup abgeschlossen")
+            }
         }
     }
 }

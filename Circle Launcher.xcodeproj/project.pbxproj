@@ -35,6 +35,10 @@
 		A42995622F8059C100126F05 /* KREISE_ENTFERNT.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = KREISE_ENTFERNT.md; sourceTree = "<group>"; };
 		A4EED36F2F811B01006652C7 /* APPEARANCE_CUSTOMIZATION.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = APPEARANCE_CUSTOMIZATION.md; sourceTree = "<group>"; };
 		A4EED3702F811CFE006652C7 /* CRASH_FIXES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CRASH_FIXES.md; sourceTree = "<group>"; };
+		A4EED3712F811DBB006652C7 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
+		A4EED3722F811E3C006652C7 /* CUSTOMIZABLE_HOTKEY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CUSTOMIZABLE_HOTKEY.md; sourceTree = "<group>"; };
+		A4EED3732F811EBD006652C7 /* HotkeyManager 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HotkeyManager 2.swift"; sourceTree = "<group>"; };
+		A4EED3742F81292C006652C7 /* IconCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconCacheManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -119,6 +123,10 @@
 				A42995622F8059C100126F05 /* KREISE_ENTFERNT.md */,
 				A4EED36F2F811B01006652C7 /* APPEARANCE_CUSTOMIZATION.md */,
 				A4EED3702F811CFE006652C7 /* CRASH_FIXES.md */,
+				A4EED3712F811DBB006652C7 /* HotkeyManager.swift */,
+				A4EED3722F811E3C006652C7 /* CUSTOMIZABLE_HOTKEY.md */,
+				A4EED3732F811EBD006652C7 /* HotkeyManager 2.swift */,
+				A4EED3742F81292C006652C7 /* IconCacheManager.swift */,
 			);
 			sourceTree = "<group>";
 		};

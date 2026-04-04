@@ -218,6 +218,12 @@ class MouseTrackingNSView: NSView {
     var onMouseMove: ((CGPoint) -> Void)?
     private var trackingArea: NSTrackingArea?
     
+    deinit {
+        if let trackingArea = trackingArea {
+            removeTrackingArea(trackingArea)
+        }
+    }
+    
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         

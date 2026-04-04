@@ -34,11 +34,20 @@ class RadialMenuPanel: NSPanel {
     }
     
     deinit {
-        // Cleanup event monitor
-        if let monitor = localEventMonitor {
-            NSEvent.removeMonitor(monitor)
+        // Cleanup event monitor auf main thread
+        if Thread.isMainThread {
+            if let monitor = localEventMonitor {
+                NSEvent.removeMonitor(monitor)
+            }
+            stopMouseTracking()
+        } else {
+            let monitor = localEventMonitor
+            DispatchQueue.main.async {
+                if let monitor = monitor {
+                    NSEvent.removeMonitor(monitor)
+                }
+            }
         }
-        stopMouseTracking()
     }
     
     private func setupContentView() {
@@ -107,17 +116,19 @@ class RadialMenuPanel: NSPanel {
     }
     
     override func close() {
-        // Direkte Ausführung, Thread-Check intern
-        stopMouseTracking()
-        
+        // Immer auf Main Thread ausführen
         if Thread.isMainThread {
-            super.close()
+            performClose()
         } else {
-            // Use sync to ensure it happens on main thread immediately
-            DispatchQueue.main.sync {
-                super.close()
+            DispatchQueue.main.async { [weak self] in
+                self?.performClose()
             }
         }
+    }
+    
+    private func performClose() {
+        stopMouseTracking()
+        super.close()
     }
     
     private func startMouseTracking() {
@@ -131,8 +142,15 @@ class RadialMenuPanel: NSPanel {
     }
     
     private func stopMouseTracking() {
-        mouseTrackingTimer?.invalidate()
-        mouseTrackingTimer = nil
+        if Thread.isMainThread {
+            mouseTrackingTimer?.invalidate()
+            mouseTrackingTimer = nil
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.mouseTrackingTimer?.invalidate()
+                self?.mouseTrackingTimer = nil
+            }
+        }
     }
     
     private func checkMousePosition() {

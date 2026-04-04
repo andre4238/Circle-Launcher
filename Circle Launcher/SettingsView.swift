@@ -21,6 +21,7 @@ struct SettingsView: View {
     @AppStorage("iconSize") private var iconSize: Double = 32.0  // Standard: 32
     @AppStorage("showAppNames") private var showAppNames: Bool = true  // Standard: An
     @State private var launchAtLogin: Bool = LaunchAtLoginManager.shared.isEnabled
+    @State private var selectedHotkey: HotkeyManager.ModifierCombination = HotkeyManager.shared.currentModifiers
     
     var body: some View {
         VStack(spacing: 0) {
@@ -444,12 +445,44 @@ struct SettingsView: View {
                                 Text("Global Hotkey")
                                     .font(.headline)
                                 
-                                Text("Press ⌥⌘ (Option + Command)")
+                                Text("Customize your launcher hotkey")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
                             
                             Spacer()
+                        }
+                        
+                        Divider()
+                        
+                        // Hotkey Picker
+                        Picker("Hotkey Combination", selection: $selectedHotkey) {
+                            ForEach(HotkeyManager.ModifierCombination.allCases) { combination in
+                                Text(combination.description)
+                                    .tag(combination)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .onChange(of: selectedHotkey) { oldValue, newValue in
+                            HotkeyManager.shared.currentModifiers = newValue
+                            showHotkeyChangedAlert(newValue)
+                        }
+                        
+                        // Current Hotkey Display
+                        HStack {
+                            Image(systemName: "hand.tap")
+                                .foregroundStyle(.green)
+                            
+                            Text("Current Hotkey:")
+                                .font(.subheadline)
+                            
+                            Text(selectedHotkey.displayName)
+                                .font(.system(.title3, design: .monospaced))
+                                .fontWeight(.bold)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.accentColor.opacity(0.15))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         
                         Divider()
@@ -461,7 +494,7 @@ struct SettingsView: View {
                             
                             HStack(spacing: 8) {
                                 Label("Press & Hold", systemImage: "hand.tap")
-                                Text("⌥⌘")
+                                Text(selectedHotkey.displayName)
                                     .font(.system(.body, design: .monospaced))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
@@ -488,7 +521,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Keyboard Shortcuts")
                 } footer: {
-                    Text("The global hotkey requires Accessibility permissions. Check in System Settings → Privacy & Security → Accessibility.")
+                    Text("The global hotkey requires Accessibility permissions. The hotkey change takes effect immediately.")
                 }
                 
                 Section {
@@ -532,6 +565,21 @@ struct SettingsView: View {
                 .font(.subheadline)
                 .foregroundStyle(.primary)
         }
+    }
+    
+    private func showHotkeyChangedAlert(_ newHotkey: HotkeyManager.ModifierCombination) {
+        let alert = NSAlert()
+        alert.messageText = "Hotkey Changed"
+        alert.informativeText = """
+        Your global hotkey has been changed to: \(newHotkey.displayName)
+        
+        The change takes effect immediately. Try it now!
+        
+        Press and hold \(newHotkey.displayName) to open Circle Launcher.
+        """
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
     
     // MARK: - Helper Methods
