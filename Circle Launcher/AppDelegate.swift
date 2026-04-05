@@ -116,14 +116,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var settingsWindow: NSWindow?
     var eventMonitor: Any?
     var modelContainer: ModelContainer!
-    var isLauncherOpen = false // Track ob Launcher offen ist
-    var launcherOpenPosition: NSPoint? // Position wo Launcher geöffnet wurde
+    var isLauncherOpen = false
+    var launcherOpenPosition: NSPoint?
     
-    // WICHTIG: Speichere nur primitive Werte, nicht SwiftData-Objekte
+    // Mode tracking for Apps vs Music
+    enum LauncherMode {
+        case apps
+        case music
+    }
+    var currentMode: LauncherMode = .apps
+    
+    // Store only primitive values, not SwiftData objects
     private var hoveredAppBundleID: String?
     private var hoveredAppName: String?
     
-    // DEBUG: Verhindert automatisches Schließen beim Loslassen der Tasten
+    // DEBUG: Prevents automatic closing when releasing keys
     var debugKeepOpen = false
     
     deinit {
@@ -324,8 +331,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if panel.isVisible {
             // Wenn eine App gehovert ist, starte sie
             if let bundleID = hoveredAppBundleID, let appName = hoveredAppName {
-                // App direkt starten OHNE SwiftData-Zugriff
-                launchApp(bundleID: bundleID, name: appName)
+                // App über Bundle Identifier starten
+                if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+                    do {
+                        try NSWorkspace.shared.launchApplication(at: url, options: [], configuration: [:])
+                        print("🚀 App gestartet: \(appName)")
+                    } catch {
+                        print("❌ Fehler beim Starten von \(appName): \(error)")
+                    }
+                }
             }
             
             // Panel schließen auf Main Thread
@@ -339,7 +353,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             isLauncherOpen = false
             launcherOpenPosition = nil
-            hoveredAppBundleID = nil
+            hoveredAppBundleID = nil // Reset IDs
             hoveredAppName = nil
         }
     }
@@ -364,30 +378,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             launcherOpenPosition = nil
             hoveredAppBundleID = nil
             hoveredAppName = nil
-        }
-    }
-    
-    // Hilfsmethode zum Starten einer App ohne SwiftData
-    private func launchApp(bundleID: String, name: String) {
-        DispatchQueue.main.async {
-            let configuration = NSWorkspace.OpenConfiguration()
-            configuration.activates = true
-            
-            guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else {
-                print("❌ App nicht gefunden: \(name) (\(bundleID))")
-                return
-            }
-            
-            NSWorkspace.shared.openApplication(
-                at: appURL,
-                configuration: configuration
-            ) { app, error in
-                if let error = error {
-                    print("❌ Fehler beim Starten von \(name): \(error.localizedDescription)")
-                } else {
-                    print("✅ App erfolgreich gestartet: \(name)")
-                }
-            }
         }
     }
     
@@ -436,25 +426,71 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Verwende die gespeicherte Position
         guard let openPosition = launcherOpenPosition else { return }
         
-        // Update content view with fresh data from model container
-        let radialMenuView = RadialMenuView(
-            onHoverChange: { [weak self] app in
-                // Speichere nur primitive Werte, NICHT das SwiftData-Objekt!
-                self?.hoveredAppBundleID = app?.bundleIdentifier
-                self?.hoveredAppName = app?.name
-                if let app = app {
-                    print("🎯 Hovering: \(app.name)")
-                } else {
-                    print("❌ Kein Hover")
-                }
-            },
-            onClose: { [weak self] in
-                self?.closeRadialMenu()
-            }
-        )
-        .modelContainer(modelContainer)
+        // Create appropriate view based on mode
+        let hostingView: NSHostingView<AnyView>
         
-        let hostingView = NSHostingView(rootView: radialMenuView)
+        switch currentMode {
+        case .apps:
+            print("🚀 Opening App Launcher mode")
+            let radialMenuView = RadialMenuView(
+                onHoverChange: { [weak self] app in
+                    self?.hoveredAppBundleID = app?.bundleIdentifier
+                    self?.hoveredAppName = app?.name
+                    if let app = app {
+                        print("🎯 Hovering: \(app.name)")
+                    }
+                },
+                onClose: { [weak self] in
+                    self?.closeRadialMenu()
+                }
+            )
+            .modelContainer(modelContainer)
+            
+            hostingView = NSHostingView(rootView: AnyView(radialMenuView))
+            
+        case .music:
+            print("🎵 Opening Music Controls mode")
+            
+            // MusicControlView inline definition (temporary until file is added to build target)
+            struct TempMusicView: View {
+                var onClose: () -> Void
+                
+                var body: some View {
+                    ZStack {
+                        Color.black.opacity(0.3)
+                        
+                        VStack(spacing: 20) {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 60))
+                                .foregroundColor(.white)
+                            
+                            Text("Music Controls")
+                                .font(.title)
+                                .foregroundColor(.white)
+                            
+                            Text("Coming Soon")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.7))
+                            
+                            Button("Close") {
+                                onClose()
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .frame(width: 300, height: 300)
+                }
+            }
+            
+            let tempMusicView = TempMusicView(
+                onClose: { [weak self] in
+                    self?.closeRadialMenu()
+                }
+            )
+            
+            hostingView = NSHostingView(rootView: AnyView(tempMusicView))
+        }
+        
         hostingView.frame = panel.contentRect(forFrameRect: panel.frame)
         panel.contentView = hostingView
         
@@ -470,13 +506,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panel.makeKey()
         isLauncherOpen = true
         
-        // Debug: Apps zählen (mit neuem Context)
-        let debugContext = ModelContext(modelContainer)
-        let descriptor = FetchDescriptor<AppItem>()
-        if let apps = try? debugContext.fetch(descriptor) {
-            print("🔍 Launcher zeigt \(apps.count) Apps an")
-            for app in apps {
-                print("  - \(app.name) (\(app.bundleIdentifier))")
+        // Debug output
+        if currentMode == .apps {
+            let debugContext = ModelContext(modelContainer)
+            let descriptor = FetchDescriptor<AppItem>()
+            if let apps = try? debugContext.fetch(descriptor) {
+                print("🔍 Launcher showing \(apps.count) apps")
             }
         }
     }
@@ -490,34 +525,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         
-        // Wenn Settings schon offen ist, nur nach vorne bringen
-        if let existingWindow = settingsWindow {
-            existingWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
+        if settingsWindow == nil {
+            // Neuen ModelContext für Settings erstellen
+            let settingsContext = ModelContext(modelContainer)
+            
+            let settingsView = SettingsView()
+                .modelContainer(modelContainer)
+                .environment(\.modelContext, settingsContext)
+                .frame(minWidth: 600, minHeight: 400)
+            
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Circle Launcher Settings"
+            window.contentView = NSHostingView(rootView: settingsView)
+            window.center()
+            window.delegate = self  // WICHTIG: Delegate setzen
+            
+            settingsWindow = window
         }
         
-        // Neues Settings Window erstellen
-        let settingsView = SettingsView()
-            .modelContainer(modelContainer)
-            .frame(minWidth: 600, minHeight: 400)
-        
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
-            styleMask: [.titled, .closable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Circle Launcher Settings"
-        window.contentView = NSHostingView(rootView: settingsView)
-        window.center()
-        window.delegate = self
-        
-        // Window released handler
-        window.isReleasedWhenClosed = false
-        
-        settingsWindow = window
-        window.makeKeyAndOrderFront(nil)
+        settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
     
@@ -647,22 +678,16 @@ extension AppDelegate: NSWindowDelegate {
             return
         }
         
-        guard let window = notification.object as? NSWindow else {
-            return
+        guard let window = notification.object as? NSWindow else { 
+            print("⚠️ windowWillClose: notification.object ist kein NSWindow")
+            return 
         }
         
         // Prüfe ob es sich um unser Settings Window handelt
         if window === settingsWindow {
             print("🪟 Settings Window wird geschlossen")
-            
-            // WICHTIG: Kleine Verzögerung vor dem Cleanup
-            // Das gibt SwiftData Zeit, Änderungen zu speichern
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                guard let self = self else { return }
-                self.settingsWindow?.delegate = nil
-                self.settingsWindow = nil
-                print("✅ Settings Window cleanup abgeschlossen")
-            }
+            settingsWindow?.delegate = nil  // Delegate entfernen BEVOR wir nil setzen
+            settingsWindow = nil
         }
     }
 }

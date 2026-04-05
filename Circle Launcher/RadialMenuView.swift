@@ -44,7 +44,7 @@ struct RadialMenuView: View {
         GeometryReader { geometry in
             ZStack {
                 // Background with blur effect - mit Loch in der Mitte (Donut-Form)
-                VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
+                VisualEffectView(material: NSVisualEffectView.Material.hudWindow, blendingMode: NSVisualEffectView.BlendingMode.behindWindow)
                     .frame(width: backgroundSize, height: backgroundSize)
                     .mask(
                         // Donut-Maske: Großer Kreis minus kleiner Kreis in der Mitte
@@ -181,7 +181,7 @@ struct AppItemView: View {
 }
 
 // Visual effect view for macOS blur
-struct VisualEffectView: NSViewRepresentable {
+fileprivate struct VisualEffectView: NSViewRepresentable {
     let material: NSVisualEffectView.Material
     let blendingMode: NSVisualEffectView.BlendingMode
     

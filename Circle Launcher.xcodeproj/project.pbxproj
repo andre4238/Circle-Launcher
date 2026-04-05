@@ -39,6 +39,9 @@
 		A4EED3722F811E3C006652C7 /* CUSTOMIZABLE_HOTKEY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CUSTOMIZABLE_HOTKEY.md; sourceTree = "<group>"; };
 		A4EED3732F811EBD006652C7 /* HotkeyManager 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HotkeyManager 2.swift"; sourceTree = "<group>"; };
 		A4EED3742F81292C006652C7 /* IconCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconCacheManager.swift; sourceTree = "<group>"; };
+		A4EED3772F824CF0006652C7 /* MediaPlayerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPlayerManager.swift; sourceTree = "<group>"; };
+		A4EED3782F824D10006652C7 /* MusicControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicControlView.swift; sourceTree = "<group>"; };
+		A4EED3792F82C382006652C7 /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -127,6 +130,9 @@
 				A4EED3722F811E3C006652C7 /* CUSTOMIZABLE_HOTKEY.md */,
 				A4EED3732F811EBD006652C7 /* HotkeyManager 2.swift */,
 				A4EED3742F81292C006652C7 /* IconCacheManager.swift */,
+				A4EED3772F824CF0006652C7 /* MediaPlayerManager.swift */,
+				A4EED3782F824D10006652C7 /* MusicControlView.swift */,
+				A4EED3792F82C382006652C7 /* VisualEffectView.swift */,
 			);
 			sourceTree = "<group>";
 		};

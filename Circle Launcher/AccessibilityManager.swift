@@ -32,24 +32,24 @@ class AccessibilityManager {
     
     private static func showPermissionAlert() {
         let alert = NSAlert()
-        alert.messageText = "Accessibility-Berechtigung erforderlich"
+        alert.messageText = "Accessibility Permission Required"
         alert.informativeText = """
-        Circle Launcher benötigt Accessibility-Berechtigung, um den globalen Hotkey (⌥Space) zu erkennen.
+        Circle Launcher needs Accessibility permission to detect the global hotkey (⌥Space).
         
-        So beheben Sie das Problem:
+        How to fix:
         
-        1. Öffnen Sie Systemeinstellungen → Datenschutz & Sicherheit → Bedienungshilfen
-        2. Klicken Sie auf das Schloss-Symbol 🔒 und authentifizieren Sie sich
-        3. Suchen Sie "Circle Launcher" in der Liste (oder fügen Sie es mit + hinzu)
-        4. Aktivieren Sie das Kontrollkästchen
-        5. Starten Sie Circle Launcher neu
+        1. Open System Settings → Privacy & Security → Accessibility
+        2. Click the lock icon 🔒 and authenticate
+        3. Look for "Circle Launcher" in the list (or add it with +)
+        4. Enable the checkbox
+        5. Restart Circle Launcher
         
-        WICHTIG: Die App erscheint erst in der Liste, nachdem Sie diese Warnung gesehen haben!
+        IMPORTANT: The app will only appear in the list after you've seen this warning!
         """
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Systemeinstellungen öffnen")
-        alert.addButton(withTitle: "Später")
-        alert.addButton(withTitle: "Anleitung kopieren")
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "Later")
+        alert.addButton(withTitle: "Copy Instructions")
         
         let response = alert.runModal()
         
@@ -58,23 +58,23 @@ class AccessibilityManager {
         } else if response == .alertThirdButtonReturn {
             // Copy instructions to clipboard
             let instructions = """
-            Circle Launcher - Accessibility-Berechtigung einrichten:
+            Circle Launcher - Setting up Accessibility Permission:
             
-            1. Systemeinstellungen → Datenschutz & Sicherheit → Bedienungshilfen
-            2. Klicken Sie auf das Schloss-Symbol (🔒) und authentifizieren Sie sich
-            3. Suchen Sie "Circle Launcher" in der Liste
-            4. Falls nicht vorhanden: Klicken Sie auf + und wählen Sie die Circle Launcher.app
-            5. Aktivieren Sie das Kontrollkästchen neben Circle Launcher
-            6. Starten Sie Circle Launcher neu
+            1. System Settings → Privacy & Security → Accessibility
+            2. Click the lock icon (🔒) and authenticate
+            3. Look for "Circle Launcher" in the list
+            4. If not present: Click + and select Circle Launcher.app
+            5. Enable the checkbox next to Circle Launcher
+            6. Restart Circle Launcher
             
-            Dann funktioniert der ⌥Space Hotkey systemweit!
+            Then the ⌥Space hotkey will work system-wide!
             """
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(instructions, forType: .string)
             
             let copied = NSAlert()
-            copied.messageText = "Anleitung kopiert!"
-            copied.informativeText = "Die Anleitung wurde in die Zwischenablage kopiert."
+            copied.messageText = "Instructions Copied!"
+            copied.informativeText = "The instructions have been copied to the clipboard."
             copied.runModal()
         }
     }
