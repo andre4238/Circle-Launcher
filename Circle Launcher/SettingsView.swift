@@ -127,8 +127,13 @@ struct SettingsView: View {
                     Text("Selected: \(selected.name)")
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("Tip: Press ⌥Space to open the launcher")
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Tip: Press ⌥⌘ to open the launcher")
+                            .foregroundStyle(.secondary)
+                        Text("Press ⌥⌘X for music controls 🎵")
+                            .font(.caption2)
+                            .foregroundStyle(.purple)
+                    }
                 }
                 
                 Spacer()
@@ -514,6 +519,26 @@ struct SettingsView: View {
                                 Text("Keys to launch")
                             }
                             .font(.caption)
+                            
+                            Divider()
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("🎵 Music Controls:")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                
+                                HStack(spacing: 8) {
+                                    Label("Press", systemImage: "music.note")
+                                    Text("⌥⌘X")
+                                        .font(.system(.body, design: .monospaced))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.purple.opacity(0.1))
+                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    Text("für Musiksteuerung")
+                                }
+                                .font(.caption)
+                            }
                         }
                         .padding(.vertical, 4)
                     }
@@ -521,7 +546,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Keyboard Shortcuts")
                 } footer: {
-                    Text("The global hotkey requires Accessibility permissions. The hotkey change takes effect immediately.")
+                    Text("The global hotkey requires Accessibility permissions. Press ⌥⌘X for music controls. The hotkey change takes effect immediately.")
                 }
                 
                 Section {

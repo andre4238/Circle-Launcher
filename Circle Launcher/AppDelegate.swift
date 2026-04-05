@@ -9,8 +9,126 @@ import Cocoa
 import SwiftUI
 import SwiftData
 import Carbon
+import AppKit
 
-/// Manager für globale Hotkey-Konfiguration
+// MARK: - Temporary Music Control View (inline until MusicControlView.swift is added to target)
+
+fileprivate struct TempMusicControlView: View {
+    @AppStorage("circleRadius") private var circleRadius: Double = 80.0
+    @AppStorage("iconSize") private var iconSize: Double = 32.0
+    
+    var onClose: () -> Void
+    
+    private var centerCircleRadius: CGFloat {
+        circleRadius * 0.375
+    }
+    
+    private var itemSize: CGFloat {
+        circleRadius * 0.625
+    }
+    
+    private var frameSize: CGFloat {
+        circleRadius * 3.75
+    }
+    
+    private var backgroundSize: CGFloat {
+        circleRadius * 2 + 80
+    }
+    
+    enum MusicControl: String, CaseIterable {
+        case playPause = "Play/Pause"
+        case next = "Next"
+        case previous = "Previous"
+        case shuffle = "Shuffle"
+        case repeat_ = "Repeat"
+        
+        var icon: String {
+            switch self {
+            case .playPause: return "play.fill"
+            case .next: return "forward.fill"
+            case .previous: return "backward.fill"
+            case .shuffle: return "shuffle"
+            case .repeat_: return "repeat"
+            }
+        }
+        
+        var position: Int {
+            switch self {
+            case .playPause: return 0
+            case .next: return 1
+            case .repeat_: return 2
+            case .shuffle: return 4
+            case .previous: return 5
+            }
+        }
+    }
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Background blur ring
+                Color.black.opacity(0.3)
+                    .frame(width: backgroundSize, height: backgroundSize)
+                
+                // Center circle with music info
+                ZStack {
+                    Circle()
+                        .fill(Color.black.opacity(0.3))
+                        .frame(width: centerCircleRadius * 2.5, height: centerCircleRadius * 2.5)
+                    
+                    VStack(spacing: 4) {
+                        Image(systemName: "music.note.list")
+                            .font(.system(size: 30))
+                            .foregroundColor(.white.opacity(0.5))
+                        
+                        Text("Music Controls")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                }
+                
+                // Music controls
+                ForEach(MusicControl.allCases, id: \.self) { control in
+                    let angle = angleForPosition(control.position, total: 6)
+                    let position = positionForAngle(angle, center: CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2))
+                    
+                    Button(action: {
+                        handleControlTap(control)
+                    }) {
+                        Image(systemName: control.icon)
+                            .font(.system(size: iconSize))
+                            .foregroundColor(.white)
+                            .frame(width: itemSize, height: itemSize)
+                    }
+                    .buttonStyle(.plain)
+                    .position(position)
+                }
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+        }
+        .frame(width: frameSize, height: frameSize)
+    }
+    
+    private func handleControlTap(_ control: MusicControl) {
+        print("🎵 Music control tapped: \(control.rawValue)")
+        // Hier würde die MediaPlayerManager-Logik kommen
+    }
+    
+    private func angleForPosition(_ position: Int, total: Int) -> Double {
+        let angleStep = 360.0 / Double(total)
+        return Double(position) * angleStep - 90
+    }
+    
+    private func positionForAngle(_ angle: Double, center: CGPoint) -> CGPoint {
+        let radians = angle * .pi / 180
+        return CGPoint(
+            x: center.x + circleRadius * cos(radians),
+            y: center.y + circleRadius * sin(radians)
+        )
+    }
+}
+
+// MARK: - HotkeyManager
 class HotkeyManager {
     
     /// Singleton-Instanz
@@ -130,6 +248,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var hoveredAppBundleID: String?
     private var hoveredAppName: String?
     
+    // Flag to track if X key was pressed (for Option+Command+X)
+    private var xKeyPressed = false
+    
+    // Timer to delay opening the app launcher
+    private var launcherOpenTimer: Timer?
+    
     // DEBUG: Prevents automatic closing when releasing keys
     var debugKeepOpen = false
     
@@ -239,6 +363,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Debug menu item to test without hotkey
         menu.addItem(NSMenuItem(title: "Launcher anzeigen (Test)", action: #selector(toggleRadialMenu), keyEquivalent: "t"))
+        menu.addItem(NSMenuItem(title: "🎵 Music Controls anzeigen (Test)", action: #selector(showMusicControls), keyEquivalent: "m"))
         menu.addItem(NSMenuItem.separator())
         
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
@@ -281,15 +406,68 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Das sorgt dafür, dass die App in den Systemeinstellungen erscheint
         AccessibilityManager.requestAccessibilityPermissions()
         
-        // Monitor for Flags Changed (Option + Command)
-        NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            // Wenn Option UND Command gedrückt sind
-            if event.modifierFlags.contains([.option, .command]) {
-                // Nur öffnen wenn noch nicht offen
-                if self?.isLauncherOpen == false {
+        // Monitor für Key Down Events (für die X-Taste) - HÖCHSTE PRIORITÄT!
+        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // Debug: Zeige alle Key-Presses mit RAW Modifiers
+            let modifiers = event.modifierFlags
+            print("🔍 Global KeyDown: '\(event.charactersIgnoringModifiers ?? "nil")' - Raw: \(modifiers.rawValue)")
+            
+            // Prüfe ob X gedrückt wurde
+            if let chars = event.charactersIgnoringModifiers?.lowercased(), chars == "x" {
+                // Jetzt prüfen wir aktuell gedrückte Modifier mit NSEvent.modifierFlags
+                let currentModifiers = NSEvent.modifierFlags
+                print("🔍 Current system modifiers: \(currentModifiers.rawValue)")
+                
+                if currentModifiers.contains([.option, .command]) {
+                    print("🎵 Option+Command+X erkannt - öffne Music Controls")
+                    self?.xKeyPressed = true
+                    
+                    // Cancel any pending launcher timer
+                    self?.launcherOpenTimer?.invalidate()
+                    self?.launcherOpenTimer = nil
+                    
+                    // DEBUG: Zeige aktuellen Status
+                    print("   ℹ️ isLauncherOpen: \(self?.isLauncherOpen ?? false)")
+                    print("   ℹ️ currentMode: \(self?.currentMode == .apps ? "apps" : "music")")
+                    
+                    // Wenn der Launcher bereits offen ist, schließe ihn zuerst
+                    if self?.isLauncherOpen == true {
+                        print("   ⚠️ Launcher ist bereits offen - schließe zuerst")
+                        self?.forceCloseRadialMenu()
+                    }
+                    
+                    // Jetzt öffnen wir die Music Controls
+                    self?.currentMode = .music
                     self?.showRadialMenuAtCursor()
                 }
+            }
+        }
+        
+        // Monitor for Flags Changed (Option + Command für Apps)
+        NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            // Wenn Option UND Command gedrückt sind (aber X wurde nicht gedrückt)
+            if event.modifierFlags.contains([.option, .command]) && self?.xKeyPressed == false {
+                // Invalidate any existing timer
+                self?.launcherOpenTimer?.invalidate()
+                
+                // Start a short delay timer - gibt Zeit für X-Taste
+                self?.launcherOpenTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in
+                    // Nur öffnen wenn noch nicht offen UND X nicht gedrückt wurde
+                    if self?.isLauncherOpen == false && self?.xKeyPressed == false {
+                        self?.currentMode = .apps
+                        self?.showRadialMenuAtCursor()
+                    }
+                }
             } else {
+                // Cancel timer wenn Modifier losgelassen werden
+                self?.launcherOpenTimer?.invalidate()
+                self?.launcherOpenTimer = nil
+                
+                // Reset X flag wenn Modifier losgelassen werden
+                if !event.modifierFlags.contains([.option, .command]) {
+                    self?.xKeyPressed = false
+                }
+                
                 // DEBUG: Nur schließen wenn debugKeepOpen NICHT aktiv ist
                 if self?.isLauncherOpen == true && self?.debugKeepOpen == false {
                     self?.closeRadialMenu()
@@ -297,15 +475,70 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         
+        // Local monitor für Key Down Events (für die X-Taste)
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // Debug: Zeige alle Key-Presses
+            let modifiers = event.modifierFlags
+            print("🔍 Local KeyDown: '\(event.charactersIgnoringModifiers ?? "nil")' - Raw: \(modifiers.rawValue)")
+            
+            // Prüfe ob X gedrückt wurde
+            if let chars = event.charactersIgnoringModifiers?.lowercased(), chars == "x" {
+                // Jetzt prüfen wir aktuell gedrückte Modifier mit NSEvent.modifierFlags
+                let currentModifiers = NSEvent.modifierFlags
+                print("🔍 Current system modifiers: \(currentModifiers.rawValue)")
+                
+                if currentModifiers.contains([.option, .command]) {
+                    print("🎵 Option+Command+X erkannt - öffne Music Controls")
+                    self?.xKeyPressed = true
+                    
+                    // Cancel any pending launcher timer
+                    self?.launcherOpenTimer?.invalidate()
+                    self?.launcherOpenTimer = nil
+                    
+                    // DEBUG: Zeige aktuellen Status
+                    print("   ℹ️ isLauncherOpen: \(self?.isLauncherOpen ?? false)")
+                    print("   ℹ️ currentMode: \(self?.currentMode == .apps ? "apps" : "music")")
+                    
+                    // Wenn der Launcher bereits offen ist, schließe ihn zuerst
+                    if self?.isLauncherOpen == true {
+                        print("   ⚠️ Launcher ist bereits offen - schließe zuerst")
+                        self?.forceCloseRadialMenu()
+                    }
+                    
+                    // Jetzt öffnen wir die Music Controls
+                    self?.currentMode = .music
+                    self?.showRadialMenuAtCursor()
+                    return nil // Event konsumieren
+                }
+            }
+            return event
+        }
+        
         // Local monitor for flags changed (wenn app aktiv ist)
         NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            // Wenn Option UND Command gedrückt sind
-            if event.modifierFlags.contains([.option, .command]) {
-                // Nur öffnen wenn noch nicht offen
-                if self?.isLauncherOpen == false {
-                    self?.showRadialMenuAtCursor()
+            // Wenn Option UND Command gedrückt sind (aber X wurde nicht gedrückt)
+            if event.modifierFlags.contains([.option, .command]) && self?.xKeyPressed == false {
+                // Invalidate any existing timer
+                self?.launcherOpenTimer?.invalidate()
+                
+                // Start a short delay timer - gibt Zeit für X-Taste
+                self?.launcherOpenTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in
+                    // Nur öffnen wenn noch nicht offen UND X nicht gedrückt wurde
+                    if self?.isLauncherOpen == false && self?.xKeyPressed == false {
+                        self?.currentMode = .apps
+                        self?.showRadialMenuAtCursor()
+                    }
                 }
             } else {
+                // Cancel timer wenn Modifier losgelassen werden
+                self?.launcherOpenTimer?.invalidate()
+                self?.launcherOpenTimer = nil
+                
+                // Reset X flag wenn Modifier losgelassen werden
+                if !event.modifierFlags.contains([.option, .command]) {
+                    self?.xKeyPressed = false
+                }
+                
                 // DEBUG: Nur schließen wenn debugKeepOpen NICHT aktiv ist
                 if self?.isLauncherOpen == true && self?.debugKeepOpen == false {
                     self?.closeRadialMenu()
@@ -320,7 +553,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 print("⚠️ Accessibility permissions not granted. Hotkey will not work globally.")
                 print("📍 Die App sollte JETZT in Systemeinstellungen → Bedienungshilfen erscheinen!")
             } else {
-                print("✅ Accessibility permissions granted. Hotkey ⌥⌘ is active.")
+                print("✅ Accessibility permissions granted. Hotkey ⌥⌘ is active, ⌥⌘X for music controls.")
             }
         }
     }
@@ -390,6 +623,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Reset position für Test-Button
             launcherOpenPosition = nil
             isLauncherOpen = false
+            currentMode = .apps  // Standard-Modus
+            showRadialMenuAtCursor()
+        }
+    }
+    
+    @objc private func showMusicControls() {
+        guard let panel = radialMenuPanel else { return }
+        
+        if panel.isVisible {
+            closeRadialMenu()
+        } else {
+            // Reset position für Test-Button
+            launcherOpenPosition = nil
+            isLauncherOpen = false
+            currentMode = .music  // Music-Modus
             showRadialMenuAtCursor()
         }
     }
@@ -451,44 +699,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         case .music:
             print("🎵 Opening Music Controls mode")
             
-            // MusicControlView inline definition (temporary until file is added to build target)
-            struct TempMusicView: View {
-                var onClose: () -> Void
-                
-                var body: some View {
-                    ZStack {
-                        Color.black.opacity(0.3)
-                        
-                        VStack(spacing: 20) {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 60))
-                                .foregroundColor(.white)
-                            
-                            Text("Music Controls")
-                                .font(.title)
-                                .foregroundColor(.white)
-                            
-                            Text("Coming Soon")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.7))
-                            
-                            Button("Close") {
-                                onClose()
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                    }
-                    .frame(width: 300, height: 300)
-                }
-            }
-            
-            let tempMusicView = TempMusicView(
+            let musicControlView = TempMusicControlView(
                 onClose: { [weak self] in
                     self?.closeRadialMenu()
                 }
             )
             
-            hostingView = NSHostingView(rootView: AnyView(tempMusicView))
+            hostingView = NSHostingView(rootView: AnyView(musicControlView))
         }
         
         hostingView.frame = panel.contentRect(forFrameRect: panel.frame)
