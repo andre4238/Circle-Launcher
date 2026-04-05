@@ -470,12 +470,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         if settingsWindow == nil {
-            // Neuen ModelContext für Settings erstellen
-            let settingsContext = ModelContext(modelContainer)
-            
             let settingsView = SettingsView()
                 .modelContainer(modelContainer)
-                .environment(\.modelContext, settingsContext)
                 .frame(minWidth: 600, minHeight: 400)
             
             let window = NSWindow(
@@ -484,10 +480,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 backing: .buffered,
                 defer: false
             )
+            window.isReleasedWhenClosed = false  // Wichtig: ARC verwaltet die Lebensdauer
             window.title = "Circle Launcher Settings"
             window.contentView = NSHostingView(rootView: settingsView)
             window.center()
-            window.delegate = self  // WICHTIG: Delegate setzen
+            window.delegate = self
             
             settingsWindow = window
         }
@@ -569,24 +566,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 extension AppDelegate: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
-        // Sicher auf Main Thread ausführen
-        guard Thread.isMainThread else {
-            DispatchQueue.main.async { [weak self] in
-                self?.windowWillClose(notification)
-            }
-            return
-        }
-        
-        guard let window = notification.object as? NSWindow else { 
-            print("⚠️ windowWillClose: notification.object ist kein NSWindow")
-            return 
-        }
-        
-        // Prüfe ob es sich um unser Settings Window handelt
+        guard let window = notification.object as? NSWindow else { return }
         if window === settingsWindow {
-            print("🪟 Settings Window wird geschlossen")
-            settingsWindow?.delegate = nil  // Delegate entfernen BEVOR wir nil setzen
-            settingsWindow = nil
+            // Defer nil-setting so the window finishes its close sequence first
+            DispatchQueue.main.async { [weak self] in
+                self?.settingsWindow = nil
+            }
         }
     }
 }
