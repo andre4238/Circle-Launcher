@@ -14,6 +14,7 @@ class RadialMenuPanel: NSPanel {
     private var mouseTrackingTimer: Timer?
     var onEscapeClose: (() -> Void)?  // Callback für Escape-Taste
     private var localEventMonitor: Any?  // Store the event monitor
+    var shouldUpdateContentOnShow = false  // Flag to control whether makeKeyAndOrderFront updates content
     
     override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
         super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
@@ -89,8 +90,12 @@ class RadialMenuPanel: NSPanel {
     }
     
     override func makeKeyAndOrderFront(_ sender: Any?) {
-        // Call super first, before async block
+        // Call super first
         super.makeKeyAndOrderFront(sender)
+        
+        // Only update content if flag is set (for backward compatibility)
+        // When AppDelegate manually sets content, this is skipped
+        guard shouldUpdateContentOnShow else { return }
         
         // Then update content on main thread
         DispatchQueue.main.async { [weak self] in

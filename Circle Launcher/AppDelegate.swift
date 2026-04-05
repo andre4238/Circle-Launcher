@@ -10,23 +10,286 @@ import SwiftUI
 import SwiftData
 import Carbon
 import AppKit
+import Combine
 
 // MARK: - Temporary Music Control View (inline until MusicControlView.swift is added to target)
+
+// Music Player Manager für Apple Music Steuerung
+fileprivate class MusicPlayerManager: ObservableObject {
+    static let shared = MusicPlayerManager()
+    
+    @Published var isPlaying: Bool = false
+    @Published var currentTrack: String = "No Track"
+    @Published var currentArtist: String = "Unknown Artist"
+    @Published var artwork: NSImage? = nil
+    @Published var shuffleEnabled: Bool = false
+    @Published var repeatMode: String = "off" // "off", "all", "one"
+    
+    private var updateTimer: Timer?
+    private var isMonitoring = false
+    
+    private init() {
+        // DON'T start monitoring in init - it can cause crashes
+        // Will be started when view appears
+    }
+    
+    func startMonitoring() {
+        guard !isMonitoring else { return }
+        isMonitoring = true
+        
+        // Ensure we're on main thread for Timer
+        DispatchQueue.main.async { [weak self] in
+            self?.updateNowPlaying()
+            
+            // Update every 2 seconds
+            self?.updateTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+                self?.updateNowPlaying()
+            }
+        }
+    }
+    
+    func stopMonitoring() {
+        guard isMonitoring else { return }
+        isMonitoring = false
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.updateTimer?.invalidate()
+            self?.updateTimer = nil
+        }
+    }
+    
+    // MARK: - AppleScript Execution
+    
+    @discardableResult
+    private func runAppleScript(_ script: String, completion: ((String?) -> Void)? = nil) {
+        // Run AppleScript on background thread to avoid blocking UI
+        DispatchQueue.global(qos: .userInitiated).async {
+            let appleScript = NSAppleScript(source: script)
+            var error: NSDictionary?
+            let result = appleScript?.executeAndReturnError(&error)
+            
+            if let error = error {
+                // Check if it's just "Music not running" - that's expected
+                if let errorNumber = error["NSAppleScriptErrorNumber"] as? Int {
+                    if errorNumber == -600 { // Application isn't running
+                        // This is normal - Music.app might not be running
+                        // Don't spam console with this
+                        DispatchQueue.main.async {
+                            completion?(nil)
+                        }
+                        return
+                    }
+                }
+                
+                // For other errors, log them
+                print("⚠️ AppleScript Error: \(error)")
+                DispatchQueue.main.async {
+                    completion?(nil)
+                }
+                return
+            }
+            
+            DispatchQueue.main.async {
+                completion?(result?.stringValue)
+            }
+        }
+    }
+    
+    // MARK: - Music Controls
+    
+    func togglePlayPause() {
+        let script = """
+        tell application "Music"
+            try
+                if player state is playing then
+                    pause
+                else
+                    play
+                end if
+            on error errMsg
+                -- If Music is not running or has no track, try to play
+                try
+                    play
+                on error
+                    -- Silently fail if nothing to play
+                end try
+            end try
+        end tell
+        """
+        runAppleScript(script) { [weak self] _ in
+            // Update immediately after command completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self?.updateNowPlaying()
+            }
+        }
+    }
+    
+    func nextTrack() {
+        let script = """
+        tell application "Music"
+            try
+                next track
+            on error errMsg
+                -- Silently fail if Music isn't running or has no playlist
+            end try
+        end tell
+        """
+        runAppleScript(script) { [weak self] _ in
+            // Update with delay to allow track to change
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self?.updateNowPlaying()
+            }
+        }
+    }
+    
+    func previousTrack() {
+        let script = """
+        tell application "Music"
+            try
+                previous track
+            on error errMsg
+                -- Silently fail if Music isn't running or has no playlist
+            end try
+        end tell
+        """
+        runAppleScript(script) { [weak self] _ in
+            // Update with delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self?.updateNowPlaying()
+            }
+        }
+    }
+    
+    func toggleShuffle() {
+        let script = """
+        tell application "Music"
+            try
+                set shuffle enabled to not shuffle enabled
+                return shuffle enabled as string
+            on error
+                return "false"
+            end try
+        end tell
+        """
+        runAppleScript(script) { [weak self] result in
+            if let result = result {
+                self?.shuffleEnabled = (result.lowercased() == "true")
+                print("🔀 Shuffle: \(self?.shuffleEnabled ?? false ? "ON" : "OFF")")
+            }
+        }
+    }
+    
+    func toggleRepeat() {
+        let script = """
+        tell application "Music"
+            try
+                if song repeat is off then
+                    set song repeat to all
+                    return "all"
+                else if song repeat is all then
+                    set song repeat to one
+                    return "one"
+                else
+                    set song repeat to off
+                    return "off"
+                end if
+            on error
+                return "off"
+            end try
+        end tell
+        """
+        runAppleScript(script) { [weak self] result in
+            if let result = result {
+                self?.repeatMode = result
+                print("🔁 Repeat: \(result)")
+            }
+        }
+    }
+    
+    // MARK: - Now Playing Info
+    
+    func updateNowPlaying() {
+        let script = """
+        tell application "Music"
+            if it is running then
+                try
+                    set trackName to name of current track
+                    set artistName to artist of current track
+                    set playerState to player state as string
+                    set shuffleState to shuffle enabled
+                    set repeatState to song repeat as string
+                    
+                    return trackName & "|" & artistName & "|" & playerState & "|" & shuffleState & "|" & repeatState
+                on error
+                    return "No Track|Unknown Artist|stopped|false|off"
+                end try
+            else
+                return "No Track|Unknown Artist|stopped|false|off"
+            end if
+        end tell
+        """
+        
+        runAppleScript(script) { [weak self] result in
+            guard let result = result else { return }
+            let components = result.components(separatedBy: "|")
+            
+            if components.count >= 5 {
+                DispatchQueue.main.async {
+                    self?.currentTrack = components[0]
+                    self?.currentArtist = components[1]
+                    self?.isPlaying = components[2].contains("playing")
+                    self?.shuffleEnabled = components[3].lowercased() == "true"
+                    self?.repeatMode = components[4].lowercased()
+                }
+                
+                // Try to get artwork (this is slow, so we do it less frequently)
+                if self?.artwork == nil || self?.currentTrack != components[0] {
+                    self?.fetchArtwork()
+                }
+            }
+        }
+    }
+    
+    private func fetchArtwork() {
+        // Artwork fetching via AppleScript is complex and slow
+        // For now, we'll use a placeholder
+        // In a real implementation, you would use Music.app's scripting bridge
+        
+        DispatchQueue.global(qos: .background).async {
+            // This is a simplified version - real artwork fetching would be more complex
+            let script = """
+            tell application "Music"
+                if it is running then
+                    try
+                        set artworkData to data of artwork 1 of current track
+                        return artworkData
+                    end try
+                end if
+            end tell
+            """
+            
+            // For now, we'll just use nil and show the gradient placeholder
+            // Full artwork implementation would require more complex AppleScript
+            // or using the ScriptingBridge framework
+        }
+    }
+}
 
 fileprivate struct TempMusicControlView: View {
     @AppStorage("circleRadius") private var circleRadius: Double = 80.0
     @AppStorage("iconSize") private var iconSize: Double = 32.0
     
+    @StateObject private var musicPlayer = MusicPlayerManager.shared
     @State private var hoveredControl: MusicControl? = nil
     
     var onClose: () -> Void
     
     private var centerCircleRadius: CGFloat {
-        circleRadius * 0.375
+        circleRadius * 0.55  // Größerer Kreis für Artwork
     }
     
     private var itemSize: CGFloat {
-        circleRadius * 0.625
+        circleRadius * 0.25  // Noch kleinere Buttons
     }
     
     private var frameSize: CGFloat {
@@ -38,78 +301,161 @@ fileprivate struct TempMusicControlView: View {
     }
     
     enum MusicControl: String, CaseIterable {
-        case playPause = "Play/Pause"
+        case playPause = "Play"
         case next = "Next"
         case previous = "Previous"
         case shuffle = "Shuffle"
         case repeat_ = "Repeat"
         
-        var icon: String {
+        func icon(isPlaying: Bool, repeatMode: String) -> String {
             switch self {
-            case .playPause: return "play.fill"
-            case .next: return "forward.fill"
-            case .previous: return "backward.fill"
-            case .shuffle: return "shuffle"
-            case .repeat_: return "repeat"
+            case .playPause: 
+                return isPlaying ? "pause.fill" : "play.fill"
+            case .next: 
+                return "forward.fill"
+            case .previous: 
+                return "backward.fill"
+            case .shuffle: 
+                return "shuffle"
+            case .repeat_: 
+                return repeatMode == "one" ? "repeat.1" : "repeat"
             }
         }
         
         var position: Int {
             switch self {
-            case .playPause: return 0
-            case .next: return 1
-            case .repeat_: return 2
-            case .shuffle: return 4
-            case .previous: return 5
+            case .playPause: return 0      // Oben
+            case .next: return 1           // Rechts oben
+            case .repeat_: return 2        // Rechts unten
+            case .shuffle: return 4        // Links unten
+            case .previous: return 5       // Links oben
             }
+        }
+        
+        var hasIndicator: Bool {
+            return self == .shuffle || self == .repeat_
         }
     }
     
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Background blur ring (Donut-Form wie in RadialMenuView)
-                VisualEffectView(material: NSVisualEffectView.Material.hudWindow, blendingMode: NSVisualEffectView.BlendingMode.behindWindow)
+                // Heller Hintergrund-Ring (oberer Teil)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.95),
+                                Color.white.opacity(0.85)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
                     .frame(width: backgroundSize, height: backgroundSize)
                     .mask(
-                        // Donut-Maske: Großer Kreis minus kleiner Kreis in der Mitte
+                        // Donut-Maske
                         ZStack {
                             Circle()
                                 .fill(Color.white)
                             
                             Circle()
                                 .fill(Color.black)
-                                .frame(width: centerCircleRadius * 2, height: centerCircleRadius * 2)
+                                .frame(width: centerCircleRadius * 2 + 20, height: centerCircleRadius * 2 + 20)
                                 .blendMode(.destinationOut)
                         }
                         .compositingGroup()
                     )
+                    .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
                 
-                // CENTER CIRCLE ist ein LOCH - Man sieht durch (wie in RadialMenuView)
-                // Aber wir zeigen ein Music Icon in der Mitte
+                // Center Circle mit Album Artwork
                 ZStack {
-                    VStack(spacing: 4) {
-                        Image(systemName: "music.note.list")
-                            .font(.system(size: 30))
-                            .foregroundColor(.white.opacity(0.5))
-                        
-                        Text("Music Controls")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.8))
-                            .shadow(color: .black.opacity(0.7), radius: 2)
-                    }
+                    // Äußerer Ring (dunkel)
+                    Circle()
+                        .stroke(Color.black.opacity(0.8), lineWidth: 8)
+                        .frame(width: centerCircleRadius * 2 + 16, height: centerCircleRadius * 2 + 16)
+                    
+                    // Artwork Circle
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.orange.opacity(0.6),
+                                    Color.pink.opacity(0.4),
+                                    Color.blue.opacity(0.3)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: centerCircleRadius * 2, height: centerCircleRadius * 2)
+                        .overlay(
+                            // Music Icon als Platzhalter
+                            Image(systemName: "music.note")
+                                .font(.system(size: centerCircleRadius * 0.8))
+                                .foregroundColor(.white.opacity(0.7))
+                        )
+                        .shadow(color: .black.opacity(0.3), radius: 10)
                 }
                 
-                // Music controls (wie AppItemView in RadialMenuView)
+                // Dunkler Hintergrund (unterer Teil für Song-Info) - NACH dem Center Circle!
+                VStack {
+                    Spacer()
+                    
+                    // Dunkler Balken
+                    RoundedRectangle(cornerRadius: 30)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.black.opacity(0.9),
+                                    Color(white: 0.1).opacity(0.9)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: backgroundSize * 1.2, height: 60)
+                        .overlay(
+                            // Song Info
+                            VStack(spacing: 2) {
+                                Text(musicPlayer.currentArtist)
+                                    .font(.system(size: 11, weight: .regular))
+                                    .foregroundColor(.white.opacity(0.6))
+                                    .lineLimit(1)
+                                
+                                Text(musicPlayer.currentTrack)
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                            }
+                            .padding(.horizontal, 8)
+                        )
+                        .offset(y: 10)
+                }
+                .frame(width: backgroundSize, height: backgroundSize)
+                
+                // Music controls
                 ForEach(MusicControl.allCases, id: \.self) { control in
                     let angle = angleForPosition(control.position, total: 6)
                     let position = positionForAngle(angle, center: CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2))
                     
-                    MusicControlButton(
-                        control: control,
-                        isHovered: hoveredControl == control,
-                        iconSize: iconSize
-                    )
+                    ZStack {
+                        // Control Button
+                        Image(systemName: control.icon(isPlaying: musicPlayer.isPlaying, repeatMode: musicPlayer.repeatMode))
+                            .font(.system(size: iconSize * 0.6, weight: .bold))  // Noch kleinere Icons
+                            .foregroundColor(isControlActive(control) ? Color.blue : Color.black.opacity(hoveredControl == control ? 1.0 : 0.7))
+                            .scaleEffect(hoveredControl == control ? 1.3 : 1.0)
+                            .shadow(color: .black.opacity(0.15), radius: 2)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: hoveredControl == control)
+                        
+                        // Roter Indikator-Punkt für Shuffle/Repeat
+                        if control.hasIndicator && isControlActive(control) {
+                            Circle()
+                                .fill(Color.blue)
+                                .frame(width: 4, height: 4)  // Noch kleinerer Indikator
+                                .offset(x: iconSize * 0.25, y: iconSize * 0.25)
+                        }
+                    }
                     .frame(width: itemSize, height: itemSize)
                     .position(position)
                     .contentShape(Circle())
@@ -124,11 +470,42 @@ fileprivate struct TempMusicControlView: View {
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .frame(width: frameSize, height: frameSize)
+        .onAppear {
+            // Start monitoring when view appears
+            musicPlayer.startMonitoring()
+        }
+        .onDisappear {
+            // Stop monitoring when view disappears
+            musicPlayer.stopMonitoring()
+        }
     }
     
     private func handleControlTap(_ control: MusicControl) {
         print("🎵 Music control tapped: \(control.rawValue)")
-        // Hier würde die MediaPlayerManager-Logik kommen
+        
+        switch control {
+        case .playPause:
+            musicPlayer.togglePlayPause()
+        case .next:
+            musicPlayer.nextTrack()
+        case .previous:
+            musicPlayer.previousTrack()
+        case .shuffle:
+            musicPlayer.toggleShuffle()
+        case .repeat_:
+            musicPlayer.toggleRepeat()
+        }
+    }
+    
+    private func isControlActive(_ control: MusicControl) -> Bool {
+        switch control {
+        case .shuffle:
+            return musicPlayer.shuffleEnabled
+        case .repeat_:
+            return musicPlayer.repeatMode != "off"
+        default:
+            return false
+        }
     }
     
     private func angleForPosition(_ position: Int, total: Int) -> Double {
@@ -142,53 +519,6 @@ fileprivate struct TempMusicControlView: View {
             x: center.x + circleRadius * cos(radians),
             y: center.y + circleRadius * sin(radians)
         )
-    }
-}
-
-// Music Control Button (ähnlich wie AppItemView)
-fileprivate struct MusicControlButton: View {
-    let control: TempMusicControlView.MusicControl
-    let isHovered: Bool
-    let iconSize: Double
-    
-    var body: some View {
-        VStack(spacing: 3) {
-            Image(systemName: control.icon)
-                .font(.system(size: iconSize))
-                .foregroundColor(.white)
-                .scaleEffect(isHovered ? 1.2 : 1.0)
-                .shadow(color: isHovered ? .accentColor.opacity(0.6) : .black.opacity(0.3), radius: isHovered ? 12 : 4)
-                .shadow(color: .black.opacity(0.5), radius: 2)
-            
-            Text(control.rawValue)
-                .font(.caption2)
-                .fontWeight(isHovered ? .bold : .semibold)
-                .foregroundColor(.white)
-                .shadow(color: .black.opacity(0.7), radius: 2)
-                .lineLimit(1)
-                .frame(maxWidth: 70)
-        }
-        .background(Color.clear)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
-    }
-}
-
-// Visual effect view for macOS blur (für TempMusicControlView)
-fileprivate struct VisualEffectView: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-    let blendingMode: NSVisualEffectView.BlendingMode
-    
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = blendingMode
-        view.state = .active
-        return view
-    }
-    
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = material
-        nsView.blendingMode = blendingMode
     }
 }
 
@@ -721,8 +1051,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let expectedPanelSize = radius * 3.75
         
         // Wenn Panel nicht existiert ODER die Größe sich geändert hat, neu erstellen
-        if radialMenuPanel == nil || abs(radialMenuPanel!.frame.width - expectedPanelSize) > 1.0 {
-            print("🔄 Panel-Größe hat sich geändert - Erstelle neues Panel")
+        let shouldRecreatePanel = radialMenuPanel == nil || 
+                                  (radialMenuPanel.map { abs($0.frame.width - expectedPanelSize) > 1.0 } ?? false)
+        
+        if shouldRecreatePanel {
+            print("🔄 Panel-Größe hat sich geändert oder Panel existiert nicht - Erstelle neues Panel")
             radialMenuPanel?.close()
             radialMenuPanel = nil
             setupRadialMenuPanel()
