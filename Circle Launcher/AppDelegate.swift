@@ -17,6 +17,8 @@ fileprivate struct TempMusicControlView: View {
     @AppStorage("circleRadius") private var circleRadius: Double = 80.0
     @AppStorage("iconSize") private var iconSize: Double = 32.0
     
+    @State private var hoveredControl: MusicControl? = nil
+    
     var onClose: () -> Void
     
     private var centerCircleRadius: CGFloat {
@@ -66,16 +68,26 @@ fileprivate struct TempMusicControlView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Background blur ring
-                Color.black.opacity(0.3)
+                // Background blur ring (Donut-Form wie in RadialMenuView)
+                VisualEffectView(material: NSVisualEffectView.Material.hudWindow, blendingMode: NSVisualEffectView.BlendingMode.behindWindow)
                     .frame(width: backgroundSize, height: backgroundSize)
+                    .mask(
+                        // Donut-Maske: Großer Kreis minus kleiner Kreis in der Mitte
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                            
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: centerCircleRadius * 2, height: centerCircleRadius * 2)
+                                .blendMode(.destinationOut)
+                        }
+                        .compositingGroup()
+                    )
                 
-                // Center circle with music info
+                // CENTER CIRCLE ist ein LOCH - Man sieht durch (wie in RadialMenuView)
+                // Aber wir zeigen ein Music Icon in der Mitte
                 ZStack {
-                    Circle()
-                        .fill(Color.black.opacity(0.3))
-                        .frame(width: centerCircleRadius * 2.5, height: centerCircleRadius * 2.5)
-                    
                     VStack(spacing: 4) {
                         Image(systemName: "music.note.list")
                             .font(.system(size: 30))
@@ -84,24 +96,29 @@ fileprivate struct TempMusicControlView: View {
                         Text("Music Controls")
                             .font(.caption)
                             .foregroundColor(.white.opacity(0.8))
+                            .shadow(color: .black.opacity(0.7), radius: 2)
                     }
                 }
                 
-                // Music controls
+                // Music controls (wie AppItemView in RadialMenuView)
                 ForEach(MusicControl.allCases, id: \.self) { control in
                     let angle = angleForPosition(control.position, total: 6)
                     let position = positionForAngle(angle, center: CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2))
                     
-                    Button(action: {
-                        handleControlTap(control)
-                    }) {
-                        Image(systemName: control.icon)
-                            .font(.system(size: iconSize))
-                            .foregroundColor(.white)
-                            .frame(width: itemSize, height: itemSize)
-                    }
-                    .buttonStyle(.plain)
+                    MusicControlButton(
+                        control: control,
+                        isHovered: hoveredControl == control,
+                        iconSize: iconSize
+                    )
+                    .frame(width: itemSize, height: itemSize)
                     .position(position)
+                    .contentShape(Circle())
+                    .onHover { hovering in
+                        hoveredControl = hovering ? control : nil
+                    }
+                    .onTapGesture {
+                        handleControlTap(control)
+                    }
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
@@ -125,6 +142,53 @@ fileprivate struct TempMusicControlView: View {
             x: center.x + circleRadius * cos(radians),
             y: center.y + circleRadius * sin(radians)
         )
+    }
+}
+
+// Music Control Button (ähnlich wie AppItemView)
+fileprivate struct MusicControlButton: View {
+    let control: TempMusicControlView.MusicControl
+    let isHovered: Bool
+    let iconSize: Double
+    
+    var body: some View {
+        VStack(spacing: 3) {
+            Image(systemName: control.icon)
+                .font(.system(size: iconSize))
+                .foregroundColor(.white)
+                .scaleEffect(isHovered ? 1.2 : 1.0)
+                .shadow(color: isHovered ? .accentColor.opacity(0.6) : .black.opacity(0.3), radius: isHovered ? 12 : 4)
+                .shadow(color: .black.opacity(0.5), radius: 2)
+            
+            Text(control.rawValue)
+                .font(.caption2)
+                .fontWeight(isHovered ? .bold : .semibold)
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.7), radius: 2)
+                .lineLimit(1)
+                .frame(maxWidth: 70)
+        }
+        .background(Color.clear)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
+    }
+}
+
+// Visual effect view for macOS blur (für TempMusicControlView)
+fileprivate struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
     }
 }
 
