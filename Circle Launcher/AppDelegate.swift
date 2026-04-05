@@ -61,8 +61,11 @@ fileprivate class MusicPlayerManager: ObservableObject {
     // MARK: - AppleScript Execution
     
     @discardableResult
-    private func runAppleScript(_ script: String, completion: ((String?) -> Void)? = nil) {
-        // Run AppleScript on background thread to avoid blocking UI
+    private func runAppleScript(_ script: String) -> String? {
+        var resultValue: String?
+        let semaphore = DispatchSemaphore(value: 0)
+        
+        // Run on background thread
         DispatchQueue.global(qos: .userInitiated).async {
             let appleScript = NSAppleScript(source: script)
             var error: NSDictionary?
@@ -73,26 +76,24 @@ fileprivate class MusicPlayerManager: ObservableObject {
                 if let errorNumber = error["NSAppleScriptErrorNumber"] as? Int {
                     if errorNumber == -600 { // Application isn't running
                         // This is normal - Music.app might not be running
-                        // Don't spam console with this
-                        DispatchQueue.main.async {
-                            completion?(nil)
-                        }
+                        semaphore.signal()
                         return
                     }
                 }
                 
                 // For other errors, log them
                 print("⚠️ AppleScript Error: \(error)")
-                DispatchQueue.main.async {
-                    completion?(nil)
-                }
+                semaphore.signal()
                 return
             }
             
-            DispatchQueue.main.async {
-                completion?(result?.stringValue)
-            }
+            resultValue = result?.stringValue
+            semaphore.signal()
         }
+        
+        // Wait for completion (with timeout)
+        _ = semaphore.wait(timeout: .now() + 5.0)
+        return resultValue
     }
     
     // MARK: - Music Controls
@@ -116,11 +117,11 @@ fileprivate class MusicPlayerManager: ObservableObject {
             end try
         end tell
         """
-        runAppleScript(script) { [weak self] _ in
-            // Update immediately after command completes
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                self?.updateNowPlaying()
-            }
+        runAppleScript(script)
+        
+        // Update immediately
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            self.updateNowPlaying()
         }
     }
     
@@ -134,11 +135,11 @@ fileprivate class MusicPlayerManager: ObservableObject {
             end try
         end tell
         """
-        runAppleScript(script) { [weak self] _ in
-            // Update with delay to allow track to change
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self?.updateNowPlaying()
-            }
+        runAppleScript(script)
+        
+        // Update with delay to allow track to change
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.updateNowPlaying()
         }
     }
     
@@ -152,11 +153,11 @@ fileprivate class MusicPlayerManager: ObservableObject {
             end try
         end tell
         """
-        runAppleScript(script) { [weak self] _ in
-            // Update with delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self?.updateNowPlaying()
-            }
+        runAppleScript(script)
+        
+        // Update with delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.updateNowPlaying()
         }
     }
     
@@ -171,11 +172,9 @@ fileprivate class MusicPlayerManager: ObservableObject {
             end try
         end tell
         """
-        runAppleScript(script) { [weak self] result in
-            if let result = result {
-                self?.shuffleEnabled = (result.lowercased() == "true")
-                print("🔀 Shuffle: \(self?.shuffleEnabled ?? false ? "ON" : "OFF")")
-            }
+        if let result = runAppleScript(script) {
+            shuffleEnabled = (result.lowercased() == "true")
+            print("🔀 Shuffle: \(shuffleEnabled ? "ON" : "OFF")")
         }
     }
     
@@ -198,11 +197,9 @@ fileprivate class MusicPlayerManager: ObservableObject {
             end try
         end tell
         """
-        runAppleScript(script) { [weak self] result in
-            if let result = result {
-                self?.repeatMode = result
-                print("🔁 Repeat: \(result)")
-            }
+        if let result = runAppleScript(script) {
+            repeatMode = result
+            print("🔁 Repeat: \(repeatMode)")
         }
     }
     
@@ -229,22 +226,21 @@ fileprivate class MusicPlayerManager: ObservableObject {
         end tell
         """
         
-        runAppleScript(script) { [weak self] result in
-            guard let result = result else { return }
+        if let result = runAppleScript(script) {
             let components = result.components(separatedBy: "|")
             
             if components.count >= 5 {
                 DispatchQueue.main.async {
-                    self?.currentTrack = components[0]
-                    self?.currentArtist = components[1]
-                    self?.isPlaying = components[2].contains("playing")
-                    self?.shuffleEnabled = components[3].lowercased() == "true"
-                    self?.repeatMode = components[4].lowercased()
+                    self.currentTrack = components[0]
+                    self.currentArtist = components[1]
+                    self.isPlaying = components[2].contains("playing")
+                    self.shuffleEnabled = components[3].lowercased() == "true"
+                    self.repeatMode = components[4].lowercased()
                 }
                 
                 // Try to get artwork (this is slow, so we do it less frequently)
-                if self?.artwork == nil || self?.currentTrack != components[0] {
-                    self?.fetchArtwork()
+                if artwork == nil || currentTrack != components[0] {
+                    fetchArtwork()
                 }
             }
         }
