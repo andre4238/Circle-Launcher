@@ -522,7 +522,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Keyboard Shortcuts")
                 } footer: {
-                    Text("The global hotkey requires Accessibility permissions. The hotkey change takes effect immediately.")
+                    Text("The hotkey change takes effect immediately.")
                 }
                 
                 Section {

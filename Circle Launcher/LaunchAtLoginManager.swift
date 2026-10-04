@@ -77,20 +77,6 @@ class LaunchAtLoginManager {
         }
     }
     
-    /// Aktiviert Launch at Login beim ersten Start (einmalig)
-    func enableOnFirstLaunch() {
-        let hasLaunchedBefore = UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
-        
-        if !hasLaunchedBefore {
-            // Erster Start - aktiviere Launch at Login automatisch
-            print("🎉 Erster Start erkannt - aktiviere Launch at Login")
-            isEnabled = true
-            UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
-        } else {
-            print("📍 App wurde bereits gestartet - Launch at Login Status: \(statusDescription)")
-        }
-    }
-    
     /// Öffnet die Systemeinstellungen für Login Items (falls Genehmigung erforderlich)
     func openLoginItemsSettings() {
         if #available(macOS 13.0, *) {

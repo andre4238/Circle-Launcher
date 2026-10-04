@@ -128,6 +128,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Timer to delay opening the app launcher
     private var launcherOpenTimer: Timer?
     
+    // Timer that polls the modifier keys for the global hotkey
+    private var hotkeyPollTimer: Timer?
+    private var isHotkeyPressed = false
+    
     // DEBUG: Prevents automatic closing when releasing keys
     var debugKeepOpen = false
     
@@ -145,16 +149,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Setup status bar icon (hidden by default, but can be shown via right-click)
         setupStatusBar()
         
-        // Enable launch at login on first start
-        LaunchAtLoginManager.shared.enableOnFirstLaunch()
-        
-        // Register global hotkey FIRST (this triggers the permission prompt)
+        // Register global hotkey
         registerGlobalHotkey()
-        
-        // Check accessibility permissions AFTER attempting to register
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            AccessibilityManager.checkAndRequestPermissions()
-        }
         
         // Create the radial menu panel (hidden by default)
         setupRadialMenuPanel()
@@ -162,6 +158,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationWillTerminate(_ notification: Notification) {
         // Cleanup bei Beendigung
+        hotkeyPollTimer?.invalidate()
+        hotkeyPollTimer = nil
+        
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
@@ -233,11 +232,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem.separator())
         
-        // Add permission check menu item
-        let permissionItem = NSMenuItem(title: "Berechtigungen prüfen", action: #selector(checkPermissions), keyEquivalent: "")
-        menu.addItem(permissionItem)
-        menu.addItem(NSMenuItem.separator())
-        
         menu.addItem(NSMenuItem(title: "Quit Circle Launcher", action: #selector(quitApp), keyEquivalent: "q"))
         
         statusItem?.menu = menu
@@ -266,66 +260,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func registerGlobalHotkey() {
-        // WICHTIG: Zuerst die Berechtigung mit Prompt anfordern
-        // Das sorgt dafür, dass die App in den Systemeinstellungen erscheint
-        AccessibilityManager.requestAccessibilityPermissions()
+        // Modifier-Status per Timer abfragen. NSEvent.modifierFlags liefert den
+        // systemweiten Status und benötigt KEINE Accessibility-Berechtigung
+        // (im Gegensatz zu globalen Event-Monitoren).
+        let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
+            self?.checkHotkeyModifiers()
+        }
+        timer.tolerance = 0.01
+        RunLoop.main.add(timer, forMode: .common)
+        hotkeyPollTimer = timer
+    }
+    
+    private func checkHotkeyModifiers() {
+        let isPressed = HotkeyManager.shared.matchesCurrentHotkey(NSEvent.modifierFlags)
         
-        // Monitor for Flags Changed (Option + Command für Apps)
-        NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            if event.modifierFlags.contains([.option, .command]) {
-                // Invalidate any existing timer
-                self?.launcherOpenTimer?.invalidate()
-                
-                // Start a short delay timer
-                self?.launcherOpenTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in
-                    if self?.isLauncherOpen == false {
-                        self?.showRadialMenuAtCursor()
-                    }
-                }
-            } else {
-                // Cancel timer wenn Modifier losgelassen werden
-                self?.launcherOpenTimer?.invalidate()
-                self?.launcherOpenTimer = nil
-                
-                // DEBUG: Nur schließen wenn debugKeepOpen NICHT aktiv ist
-                if self?.isLauncherOpen == true && self?.debugKeepOpen == false {
-                    self?.closeRadialMenu()
+        // Nur auf Änderungen reagieren
+        guard isPressed != isHotkeyPressed else { return }
+        isHotkeyPressed = isPressed
+        
+        if isPressed {
+            // Invalidate any existing timer
+            launcherOpenTimer?.invalidate()
+            
+            // Start a short delay timer
+            let openTimer = Timer(timeInterval: 0.15, repeats: false) { [weak self] _ in
+                if self?.isLauncherOpen == false {
+                    self?.showRadialMenuAtCursor()
                 }
             }
-        }
-        
-        // Local monitor for flags changed (wenn app aktiv ist)
-        NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            if event.modifierFlags.contains([.option, .command]) {
-                // Invalidate any existing timer
-                self?.launcherOpenTimer?.invalidate()
-                
-                // Start a short delay timer
-                self?.launcherOpenTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in
-                    if self?.isLauncherOpen == false {
-                        self?.showRadialMenuAtCursor()
-                    }
-                }
-            } else {
-                // Cancel timer wenn Modifier losgelassen werden
-                self?.launcherOpenTimer?.invalidate()
-                self?.launcherOpenTimer = nil
-                
-                // DEBUG: Nur schließen wenn debugKeepOpen NICHT aktiv ist
-                if self?.isLauncherOpen == true && self?.debugKeepOpen == false {
-                    self?.closeRadialMenu()
-                }
-            }
-            return event
-        }
-        
-        // Verify permissions after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            if !AccessibilityManager.hasAccessibilityPermissions() {
-                print("⚠️ Accessibility permissions not granted. Hotkey will not work globally.")
-                print("📍 Die App sollte JETZT in Systemeinstellungen → Bedienungshilfen erscheinen!")
-            } else {
-                print("✅ Accessibility permissions granted. Hotkey ⌥⌘ is active.")
+            RunLoop.main.add(openTimer, forMode: .common)
+            launcherOpenTimer = openTimer
+        } else {
+            // Cancel timer wenn Modifier losgelassen werden
+            launcherOpenTimer?.invalidate()
+            launcherOpenTimer = nil
+            
+            // DEBUG: Nur schließen wenn debugKeepOpen NICHT aktiv ist
+            if isLauncherOpen && !debugKeepOpen {
+                closeRadialMenu()
             }
         }
     }
@@ -491,72 +463,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-    }
-    
-    @objc private func checkPermissions() {
-        let hasPermission = AccessibilityManager.hasAccessibilityPermissions()
-        
-        let alert = NSAlert()
-        if hasPermission {
-            alert.messageText = "✅ Berechtigung erteilt"
-            alert.informativeText = """
-            Circle Launcher hat Accessibility-Berechtigung!
-            
-            Der globale Hotkey ⌥⌘ (Option + Command) sollte funktionieren.
-            
-            Falls nicht:
-            1. Starten Sie die App neu
-            2. Überprüfen Sie die Console.app für Fehlermeldungen
-            3. Versuchen Sie den Test-Button im Menü
-            """
-            alert.alertStyle = .informational
-        } else {
-            alert.messageText = "❌ Berechtigung fehlt"
-            alert.informativeText = """
-            Circle Launcher hat KEINE Accessibility-Berechtigung.
-            
-            Der globale Hotkey ⌥⌘ (Option + Command) wird nicht funktionieren!
-            
-            So beheben (Schritt für Schritt):
-            
-            1. Öffnen Sie Systemeinstellungen
-            2. Gehen Sie zu: Datenschutz & Sicherheit → Bedienungshilfen
-            3. Klicken Sie auf das Schloss 🔒 unten links (Passwort eingeben)
-            4. Suchen Sie "Circle Launcher" oder "Xcode" in der Liste
-            5. Falls nicht da: Klicken Sie auf + und wählen Sie die Circle Launcher.app
-            6. Aktivieren Sie das Kontrollkästchen ✅
-            7. Starten Sie Circle Launcher neu
-            
-            WICHTIG: 
-            - Bei Xcode-Builds steht manchmal "Xcode" statt "Circle Launcher" in der Liste
-            - Die App erscheint erst nach dem ersten Start in der Liste
-            - Nach dem Aktivieren MUSS die App neu gestartet werden
-            """
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: "Systemeinstellungen öffnen")
-            alert.addButton(withTitle: "Berechtigung jetzt anfordern")
-            alert.addButton(withTitle: "Abbrechen")
-            
-            let response = alert.runModal()
-            if response == .alertFirstButtonReturn {
-                // Systemeinstellungen öffnen
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                    NSWorkspace.shared.open(url)
-                }
-            } else if response == .alertSecondButtonReturn {
-                // Berechtigung explizit anfordern (zeigt System-Dialog)
-                AccessibilityManager.requestAccessibilityPermissions()
-                
-                // Nach 1 Sekunde erneut prüfen
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.checkPermissions()
-                }
-            }
-            return
-        }
-        
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
     }
     
     @objc private func quitApp() {
