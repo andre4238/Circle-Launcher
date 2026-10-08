@@ -525,6 +525,14 @@ struct SettingsView: View {
                     Text("The hotkey change takes effect immediately.")
                 }
                 
+                #if DIRECT
+                Section {
+                    LicenseSettingsSection()
+                } header: {
+                    Text("License")
+                }
+                #endif
+                
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {

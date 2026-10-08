@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import Circle_Launcher
+@testable import CircleLauncher
 
 struct Circle_LauncherTests {
 

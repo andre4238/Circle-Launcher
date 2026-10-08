@@ -154,6 +154,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Create the radial menu panel (hidden by default)
         setupRadialMenuPanel()
+        
+        #if DIRECT
+        // Direct (.dmg) build: the app is locked until a valid licence key has been entered.
+        startLicensing()
+        #endif
     }
     
     func applicationWillTerminate(_ notification: Notification) {
@@ -230,6 +235,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        #if DIRECT
+        menu.addItem(NSMenuItem(title: "License...", action: #selector(showLicense), keyEquivalent: ""))
+        #endif
         menu.addItem(NSMenuItem.separator())
         
         menu.addItem(NSMenuItem(title: "Quit Circle Launcher", action: #selector(quitApp), keyEquivalent: "q"))
@@ -367,6 +375,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         
+        #if DIRECT
+        // Ohne gültige Lizenz öffnet sich statt des Launchers das Lizenzfenster.
+        guard requireLicense() else { return }
+        #endif
+        
         // Prüfe ob Panel-Größe sich geändert hat
         let circleRadius = UserDefaults.standard.double(forKey: "circleRadius")
         let radius = circleRadius > 0 ? circleRadius : 80.0
@@ -441,6 +454,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         
+        #if DIRECT
+        guard requireLicense() else { return }
+        #endif
+        
         if settingsWindow == nil {
             let settingsView = SettingsView()
                 .modelContainer(modelContainer)
@@ -481,3 +498,79 @@ extension AppDelegate: NSWindowDelegate {
         }
     }
 }
+
+#if DIRECT
+// MARK: - Licence (direct build only)
+extension AppDelegate {
+    static var isRunningTests: Bool { ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil }
+    
+    /// Confirms the stored licence key and shows the licence window if the app is locked.
+    func startLicensing() {
+        guard !Self.isRunningTests else { return }
+        let window = LicenseWindowController.shared
+        NotificationCenter.default.addObserver(forName: Licensing.stateDidChange, object: Licensing.shared, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.licenseStateDidChange() }
+        }
+        Task {
+            await Licensing.shared.checkStoredKey()
+            window.present()   // does nothing when the app is unlocked
+        }
+        #if DEBUG
+        autoActivateIfRequested()
+        #endif
+    }
+    
+    /// Returns true when the app may be used; otherwise brings up the licence window.
+    func requireLicense() -> Bool {
+        if Self.isRunningTests || Licensing.shared.isUnlocked { return true }
+        LicenseWindowController.shared.present()
+        return false
+    }
+    
+    /// Menu item "License...": the licence window while locked, otherwise the settings
+    /// (the licence is shown and can be deactivated on the General tab).
+    @objc func showLicense() {
+        if Licensing.shared.isUnlocked { openSettings() } else { LicenseWindowController.shared.present() }
+    }
+    
+    /// The app has just been locked (licence deactivated in Settings, or rejected by the server):
+    /// nothing of the app stays usable – the licence window takes over.
+    func licenseStateDidChange() {
+        guard !Licensing.shared.isUnlocked else { return }
+        settingsWindow?.close()
+        if isLauncherOpen { forceCloseRadialMenu() }
+        LicenseWindowController.shared.present()
+    }
+    
+    #if DEBUG
+    /// Diagnostic hook (debug builds only): `-CircleAutoActivate <key>` runs the whole licence
+    /// cycle in the real app – enter the key, open the settings, deactivate – prints the outcome
+    /// and quits. It uses its own keychain entry and settings, so a licence that is really in use
+    /// on this Mac is not touched.
+    private func autoActivateIfRequested() {
+        guard let key = UserDefaults.standard.string(forKey: "CircleAutoActivate"), !key.isEmpty else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            while Licensing.shared.isCheckingKey { try? await Task.sleep(for: .milliseconds(100)) }
+            let gate = LicenseWindowController.shared.window
+            var report = "windowBefore=\(gate?.isVisible ?? false) closable=\(gate?.styleMask.contains(.closable) ?? true) lockedBefore=\(!self.requireLicense())"
+            let unlocked = await Licensing.shared.activate(licenseKey: key)
+            try? await Task.sleep(for: .milliseconds(600))
+            report += " | unlocked=\(unlocked) usable=\(self.requireLicense()) windowAfter=\(gate?.isVisible ?? false) error=\(Licensing.shared.lastError ?? "-")"
+            if unlocked {
+                // Settings open, then what "Deactivate License on This Mac" does.
+                self.openSettings()
+                try? await Task.sleep(for: .milliseconds(600))
+                let settingsOpen = self.settingsWindow?.isVisible ?? false
+                let deactivated = await Licensing.shared.deactivateThisDevice()
+                try? await Task.sleep(for: .milliseconds(800))
+                report += " | settingsOpen=\(settingsOpen) deactivated=\(deactivated) lockedAfter=\(!Licensing.shared.isUnlocked) settingsClosed=\(!(self.settingsWindow?.isVisible ?? false)) windowBack=\(gate?.isVisible ?? false) keyForgotten=\(Licensing.shared.maskedLicenseKey == nil)"
+            }
+            print("LICENSE-SELFTEST " + report)
+            Licensing.shared.forgetStoredKeyForTesting()
+            exit(0)
+        }
+    }
+    #endif
+}
+#endif
